@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1098373753872",
+    "project_id": "health-tracking-system-700bf",
+    "storage_bucket": "health-tracking-system-700bf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1098373753872:android:3927a1d586a82e08ac2e95",
+        "android_client_info": {
+          "package_name": "com.example.health_care"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJi50qFPLpioWrRsLydiCmYzxNxbd_8T0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
