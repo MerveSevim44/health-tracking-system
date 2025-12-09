@@ -10,10 +10,14 @@ import 'package:health_care/screens/water/water_success_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
 import 'package:health_care/screens/medication/medication_detail_screen.dart';
 import 'package:health_care/screens/medication/medication_add_screen.dart';
+import 'package:health_care/screens/medication/medication_home_screen.dart';
+import 'package:health_care/screens/medication/medication_detail_screen.dart';
+import 'package:health_care/screens/medication/medication_add_screen.dart';
 import 'package:health_care/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'models/mood_model.dart';
 import 'models/water_model.dart';
+import 'models/medication_model.dart';
 import 'models/medication_model.dart';
 
 void main() async {
@@ -27,6 +31,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => MoodModel()),
         ChangeNotifierProvider(create: (_) => WaterModel()),
+        ChangeNotifierProvider(create: (_) => MedicationModel()),
         ChangeNotifierProvider(create: (_) => MedicationModel()),
       ],
       child: const MyApp(),
@@ -47,12 +52,16 @@ class MyApp extends StatelessWidget {
       routes: {
         '/home': (context) => const PastelHomeNavigation(),
         '/breathing': (context) => const BreathingExerciseScreen(),
+        '/breathing': (context) => const BreathingExerciseScreen(),
         '/water/home': (context) => const WaterHomeScreen(),
         '/water/stats': (context) => const WaterStatsScreen(),
         '/water/success': (context) => const WaterSuccessScreen(
           achievedAmount: 2000,
           goalAmount: 2000,
         ),
+        '/medication': (context) => const MedicationHomeScreen(),
+        '/medication/detail': (context) => const MedicationDetailScreen(),
+        '/medication/add': (context) => const MedicationAddScreen(),
         '/medication': (context) => const MedicationHomeScreen(),
         '/medication/detail': (context) => const MedicationDetailScreen(),
         '/medication/add': (context) => const MedicationAddScreen(),
