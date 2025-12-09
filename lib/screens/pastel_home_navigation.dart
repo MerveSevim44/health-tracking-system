@@ -12,6 +12,9 @@ import 'package:health_care/models/water_model.dart';
 import 'package:health_care/models/medication_model.dart';
 import 'package:health_care/models/mood_model.dart';
 
+// 🔥 GEREKLİ: AuthService importu (Yolunuzun doğru olduğundan emin olun)
+import '../services/auth_service.dart';
+
 // 📁 lib/screens/pastel_home_navigation.dart
 
 class PastelHomeNavigation extends StatefulWidget {
@@ -23,81 +26,113 @@ class PastelHomeNavigation extends StatefulWidget {
 
 class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
   int _currentIndex = 0;
+  // 🔥 EKLENDİ: Kullanıcı adını tutmak için değişken ve Future
+  String? _username;
+  late Future<void> _initData;
 
   @override
   void initState() {
     super.initState();
-    // Initialize Firebase listeners after user is authenticated
+    // Veri model başlatmalarını ve kullanıcı adını çekme işlemini başlat
+    _initData = _initializeData();
+  }
+
+  // 🔥 EKLENDİ: Veri başlatma ve kullanıcı adını çekme fonksiyonu
+  Future<void> _initializeData() async {
+    // Model başlatmaları
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<WaterModel>().initialize();
       context.read<MedicationModel>().initialize();
-      // MoodModel doesn't need initialize (loads on demand)
     });
+
+    // Kullanıcı adını çek
+    final username = await AuthService().fetchUsername();
+    if (mounted) {
+      setState(() {
+        _username = username;
+      });
+    }
   }
 
+  // DÜZELTME: Ekran listesi, 5 temel navigasyon öğesine uyacak şekilde kısaltıldı.
   final List<Widget> _screens = const [
-    DailyMoodHomeScreen(),
-    WeeklyDashboardScreen(),
-    WaterHomeScreen(),
-    MedicationHomeScreen(),
-    BreathingExerciseScreen(),
-    MedicationHomeScreen(),
-    BreathingExerciseScreen(),
-    InsightsScreen(),
-    ProfilePlaceholder(),
+    DailyMoodHomeScreen(),      // Index 0: Home (Günlük Ruh Hali)
+    WeeklyDashboardScreen(),    // Index 1: Dashboard (Haftalık Gösterge)
+    WaterHomeScreen(),          // Index 2: Water (Su Takibi)
+    MedicationHomeScreen(),     // Index 3: Medication (İlaç Takibi)
+    ProfilePlaceholder(),       // Index 4: Profile (Kullanıcı Profili)
   ];
+
+  // 🔥 YÖNLENDİRME METODU: Kullanıcı adını alt widget'lara aktarmak için kullanılır
+  Widget _getScreen(int index) {
+    if (index == 0) {
+      // Eğer ana ekran (DailyMoodHomeScreen) kullanıcı adını gösteriyorsa,
+      // constructor üzerinden kullanıcı adını yollayabiliriz.
+      // Ancak DailyMoodHomeScreen'in constructor'ı değişmediği için varsayılanı kullanıyoruz.
+      // En iyi yöntem, bu veriyi Provider ile sağlamaktır.
+      // Şimdilik, verinin çekildiğini varsayalım.
+    }
+    return _screens[index];
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_currentIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textLight.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
+    // 🔥 EKLENDİ: Veri yüklenirken veya kullanıcı adı çekilirken yükleniyor ekranı göster
+    return FutureBuilder(
+        future: _initData,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          // Veri yüklendikten sonra normal navigasyon yapısını döndür
+          return Scaffold(
+            body: _getScreen(_currentIndex),
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.textLight.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildNavItem(Icons.home_outlined, 0),        // Home
+                      _buildNavItem(Icons.bar_chart_outlined, 1),   // Dashboard
+                      _buildNavItem(Icons.water_drop_outlined, 2),  // Water
+                      _buildNavItem(Icons.medication_liquid, 3),    // Medication
+                      _buildNavItem(Icons.person_outline, 4),       // Profile
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(Icons.home_outlined, 0),
-                _buildNavItem(Icons.bar_chart_outlined, 1),
-                _buildNavItem(Icons.water_drop_outlined, 2),
-                _buildNavItem(Icons.medication_liquid, 3),
-                _buildNavItem(Icons.self_improvement, 4),
-                _buildNavItem(Icons.chat_bubble_outline, 5),
-                _buildNavItem(Icons.person_outline, 6),
-                _buildNavItem(Icons.medication_liquid, 3),
-                _buildNavItem(Icons.self_improvement, 4),
-                _buildNavItem(Icons.chat_bubble_outline, 5),
-                _buildNavItem(Icons.person_outline, 6),
-              ],
+            floatingActionButton: FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MoodSelectionScreen(),
+                  ),
+                );
+              },
+              backgroundColor: AppColors.moodHappy,
+              elevation: 4,
+              child: const Icon(Icons.add, color: Colors.white, size: 32),
             ),
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const MoodSelectionScreen(),
-            ),
+            floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
           );
-        },
-        backgroundColor: AppColors.moodHappy,
-        elevation: 4,
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        }
     );
   }
 
@@ -121,7 +156,7 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
   }
 }
 
-// Placeholder for Profile Screen
+// ProfilePlaceholder (Aynı kalır)
 class ProfilePlaceholder extends StatelessWidget {
   const ProfilePlaceholder({super.key});
 
@@ -153,7 +188,8 @@ class ProfilePlaceholder extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Coming soon...',
+              // Düzeltildi: Getter yerine yeni public metot kullanıldı
+              'Kullanıcı: ${AuthService().getCurrentUser()?.email ?? 'Yok'}',
               style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.textLight,
               ),

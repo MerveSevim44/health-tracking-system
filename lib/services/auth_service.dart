@@ -8,24 +8,56 @@ import 'package:flutter/foundation.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 🌟 ÇÖZÜM: Database URL'ini doğrudan belirterek bölgesel uyuşmazlık hatası giderildi.
+  // ÇÖZÜM: Database URL'ini doğrudan belirterek bölgesel uyuşmazlık hatası giderildi.
   final FirebaseDatabase _database = FirebaseDatabase.instanceFor(
-      app: Firebase.app(), // Eğer app'i belirtmek gerekirse
+      app: Firebase.app(),
       databaseURL: "https://health-tracking-system-700bf-default-rtdb.europe-west1.firebasedatabase.app"
   );
 
   // ----------------------------------------------------
+  // 4. KULLANICI ADINI ÇEKME METODU
+  // ----------------------------------------------------
+  Future<String?> fetchUsername() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return null;
+    }
+
+    try {
+      final dataSnapshot = await _database.ref()
+          .child('users')
+          .child(user.uid)
+          .child('username')
+          .get();
+
+      if (dataSnapshot.exists && dataSnapshot.value != null) {
+        return dataSnapshot.value as String?;
+      }
+      return null;
+
+    } catch (e) {
+      debugPrint('Kullanıcı adı çekilemedi: $e');
+      return null;
+    }
+  }
+
+  // ----------------------------------------------------
+  // 5. CURRENT USER ALMA METODU
+  // ----------------------------------------------------
+  /// Firebase Auth'ta şu anda oturum açmış olan User nesnesini döndürür.
+  User? getCurrentUser() {
+    return _auth.currentUser;
+  }
+
+  // ----------------------------------------------------
   // 1. KAYIT İŞLEMİ (Sign Up)
   // ----------------------------------------------------
-
-  // Sadece username, email ve password alır (UI'a uyumlu)
   Future<void> registerUser({
     required String username,
     required String email,
     required String password,
   }) async {
     try {
-      // 1. ADIM: Authentication
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password.trim(),
@@ -34,13 +66,10 @@ class AuthService {
       final User? user = userCredential.user;
 
       if (user != null) {
-        // 2. ADIM: REALTIME DATABASE'e kullanıcı verilerini kaydetme
-        // Path: users/{user.uid}
         await _database.ref().child('users').child(user.uid).set({
           'uid': user.uid,
           'username': username.trim(),
           'email': email.trim(),
-          // Realtime Database sunucu zamanı
           'createdAt': ServerValue.timestamp,
         });
       }
@@ -48,7 +77,6 @@ class AuthService {
       debugPrint('Kayıt Başarılı: UID ${user?.uid}');
 
     } on FirebaseAuthException catch (e) {
-      // Hata Yönetimi
       String errorMessage;
       if (e.code == 'weak-password') {
         errorMessage = 'Şifre çok zayıf. Lütfen daha güçlü bir şifre seçin.';
@@ -94,6 +122,29 @@ class AuthService {
 
     } catch (e) {
       throw 'Giriş sırasında beklenmedik bir hata oluştu.';
+    }
+  }
+
+  // ----------------------------------------------------
+  // 6. ŞİFRE SIFIRLAMA İŞLEMİ
+  // ----------------------------------------------------
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+      debugPrint('Şifre sıfırlama e-postası $email adresine gönderildi.');
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      if (e.code == 'user-not-found') {
+        errorMessage = 'Bu e-posta adresi ile kayıtlı bir kullanıcı bulunamadı.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Lütfen geçerli bir e-posta adresi girin.';
+      } else {
+        errorMessage = 'Şifre sıfırlama başarısız oldu. Hata: ${e.message}';
+      }
+      debugPrint('ŞİFRE SIFIRLAMA HATA: $errorMessage');
+      throw errorMessage;
+    } catch (e) {
+      throw 'Şifre sıfırlama sırasında beklenmedik bir hata oluştu.';
     }
   }
 

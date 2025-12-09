@@ -1,7 +1,5 @@
-// 📁 lib/screens/first_screen.dart (Hata Düzeltmeleri Yapıldı)
-
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:firebase_auth/firebase_auth.dart'; // Artık kullanılmadığı için kaldırılabilir
 
 // Ana uygulama renkleri
 const Color primaryOrange = Color(0xFFFF7F00); // Ana turuncu renk
@@ -13,33 +11,7 @@ const Color white = Colors.white;
 class FirstScreen extends StatelessWidget {
   const FirstScreen({super.key});
 
-  Future<void> _signInAnonymously(BuildContext context) async {
-    try {
-      // Try to sign in with test email first (create if not exists)
-      try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: 'test@test.com',
-          password: 'test123',
-        );
-      } catch (e) {
-        // If user doesn't exist, create it
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: 'test@test.com',
-          password: 'test123',
-        );
-      }
-      
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Giriş hatası: $e')),
-        );
-      }
-    }
-  }
+  // ⚠️ Not: _signInAnonymously fonksiyonu artık kullanılmadığı için kaldırılmıştır.
 
   @override
   Widget build(BuildContext context) {
@@ -69,11 +41,10 @@ class FirstScreen extends StatelessWidget {
                 ),
               ),
               child: Center(
-                // HATA DÜZELTME: Center'ın child'ı Column olmalı.
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // AI Robot İKONU (SizedBox ikonun içinde DEĞİL, hemen altında olmalı)
+                    // AI Robot İKONU (Örnek yol)
                     Image.asset(
                       'assets/images/ai_robot.png',
                       width: size.width * 0.65,
@@ -81,7 +52,7 @@ class FirstScreen extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
 
-                    // Uygulama Adı EKLENDİ (Şimdi Column'un doğru bir child'ı)
+                    // Uygulama Adı
                     const Text(
                       'App',
                       style: TextStyle(
@@ -105,12 +76,11 @@ class FirstScreen extends StatelessWidget {
                     // Başlık ve Açıklama Metni
                     Column(
                       children: [
-                        // HATA DÜZELTME: Boşluk 10'a düşürüldü, çünkü üst bar alanı artık daha az.
                         const SizedBox(height: 20),
                         Text(
                           'Yapay zeka Destekli Sağlık Takip Sistemimiz Sizlerle!',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: textColor,
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
@@ -131,12 +101,14 @@ class FirstScreen extends StatelessWidget {
                     // SADECE KAYIT OL BUTONU
                     Column(
                       children: [
-                        // Create account Butonu (Ana eylem)
                         SizedBox(
                           width: double.infinity,
                           height: 55,
                           child: ElevatedButton(
-                            onPressed: () => _signInAnonymously(context),
+                            // 🔥 GÜNCELLENDİ: Kayıt Ol sayfasına yönlendirme
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/register');
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryOrange,
                               shape: RoundedRectangleBorder(
