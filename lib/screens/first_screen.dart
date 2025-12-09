@@ -1,7 +1,6 @@
 // 📁 lib/screens/first_screen.dart (Hata Düzeltmeleri Yapıldı)
 
 import 'package:flutter/material.dart';
-import 'register_screen.dart'; // Yönlendirme için gerekli
 
 // Ana uygulama renkleri
 const Color primaryOrange = Color(0xFFFF7F00); // Ana turuncu renk
@@ -109,12 +108,7 @@ class FirstScreen extends StatelessWidget {
                           height: 55,
                           child: ElevatedButton(
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const RegisterScreen(),
-                                ),
-                              );
+                              Navigator.pushReplacementNamed(context, '/home');
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryOrange,
@@ -124,7 +118,7 @@ class FirstScreen extends StatelessWidget {
                               elevation: 5,
                             ),
                             child: const Text(
-                              'Hesap Oluştur',
+                              'Başlayın',
                               style: TextStyle(
                                 color: white,
                                 fontSize: 18,

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/mood_model.dart';
-import 'package:health_care/widgets/theme.dart'; // Renkler buradan geliyor
+import 'package:health_care/models/water_model.dart';
 import 'package:health_care/screens/breathing_exercise_screen.dart';
-import 'package:health_care/screens/chat.dart'; // <<< ChatScreen buraya taşındı
+import 'package:health_care/screens/chat.dart';
+import 'package:health_care/theme/water_theme.dart';
 
 // Geçici ChatScreen tanımı kaldırıldı, artık chat.dart kullanılıyor.
 
@@ -39,22 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       // Body, seçili olan sayfayı gösterir
       body: _pages[_currentIndex],
-      // Sabit Alt Navigasyon Barı (Renkler ThemeData'dan gelir)
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Nefes Al'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'İstatistikler'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Sohbet'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Ayarlar'),
-        ],
-      ),
     );
   }
 }
@@ -92,12 +77,17 @@ class MainContent extends StatelessWidget {
 
           const SizedBox(height: 40),
 
-          // 4. Eklenen Resim Widget'ı
+          // 4. Su Takibi Kartı
+          const WaterTrackingCard(),
+
+          const SizedBox(height: 24),
+
+          // 5. Eklenen Resim Widget'ı
           _buildNatureImage(context, lightCardColor, greyText),
 
           const SizedBox(height: 40), // Boşluk ayarlandı.
 
-          // 5. Konuşmaya Hazır mısın? Kartı
+          // 6. Konuşmaya Hazır mısın? Kartı
           const ConversationCard(),
         ],
       ),
@@ -340,6 +330,136 @@ class ConversationCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// --- Su Takip Kartı Widget'ı ---
+class WaterTrackingCard extends StatelessWidget {
+  const WaterTrackingCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<WaterModel>(
+      builder: (context, waterModel, child) {
+        final currentIntake = waterModel.getCurrentIntake();
+        final dailyGoal = waterModel.dailyGoal;
+        final progress = waterModel.getProgress();
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.pushNamed(context, '/water/home');
+          },
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFE1F5FE),
+                  Color(0xFFFFFFFF),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: WaterColors.waterPrimary.withValues(alpha: 0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: WaterColors.waterPrimary.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.water_drop,
+                            color: WaterColors.waterPrimary,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Su Takibi',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: WaterColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: WaterColors.textLight,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                
+                // Progress bar
+                Container(
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: WaterColors.waterLight.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: progress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: WaterColors.waterBlobGradient,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Stats
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$currentIntake ml / $dailyGoal ml',
+                      style: WaterTextStyles.bodyLarge.copyWith(
+                        color: WaterColors.textDark,
+                      ),
+                    ),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: WaterTextStyles.headlineMedium.copyWith(
+                        fontSize: 18,
+                        color: WaterColors.waterDark,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Harika gidiyorsun! Su içmeye devam et 💧',
+                  style: WaterTextStyles.bodyMedium,
+                ),
+              ],
+            ),
           ),
         );
       },

@@ -17,10 +17,18 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # Firebase packages
-  firebase_core: ^4.2.1
+  firebase_core: ^3.15.2
+  firebase_auth: ^5.3.4
+  firebase_database: ^11.3.10
   foundation: ^0.0.5
   provider: ^6.1.5+1
   http: ^1.6.0
+  
+  # Charts
+  fl_chart: ^0.69.0
+  
+  # Date formatting
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:

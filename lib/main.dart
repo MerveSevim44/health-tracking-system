@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:health_care/screens/home_screen.dart';
-import 'package:health_care/widgets/theme.dart';
+import 'package:health_care/screens/first_screen.dart';
+import 'package:health_care/screens/pastel_home_navigation.dart';
+import 'package:health_care/screens/water/water_home_screen.dart';
+import 'package:health_care/screens/water/water_stats_screen.dart';
+import 'package:health_care/screens/water/water_success_screen.dart';
+import 'package:health_care/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'models/mood_model.dart';
+import 'models/water_model.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => MoodModel()),
+        ChangeNotifierProvider(create: (_) => WaterModel()),
       ],
       child: const MyApp(),
     ),
@@ -21,10 +27,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Duygu Durumu',
+      title: 'Health Tracking System',
       debugShowCheckedModeBanner: false,
-      theme: appTheme, // <<< GÜNCELLENDİ: Oluşturduğumuz temayı kullan
-      home: const HomeScreen(),
+      theme: pastelAppTheme,
+      home: const FirstScreen(),
+      routes: {
+        '/home': (context) => const PastelHomeNavigation(),
+        '/water/home': (context) => const WaterHomeScreen(),
+        '/water/stats': (context) => const WaterStatsScreen(),
+        '/water/success': (context) => const WaterSuccessScreen(
+          achievedAmount: 2000,
+          goalAmount: 2000,
+        ),
+      },
     );
   }
 }
