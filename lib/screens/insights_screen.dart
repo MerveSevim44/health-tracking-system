@@ -96,7 +96,6 @@ class InsightsScreen extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -293,43 +292,6 @@ class InsightsScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textLight.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavIcon(Icons.home_outlined, true),
-              _buildNavIcon(Icons.edit_note_outlined, false),
-              _buildNavIcon(Icons.chat_bubble_outline, false),
-              _buildNavIcon(Icons.person_outline, false),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavIcon(IconData icon, bool isSelected) {
-    return Icon(
-      icon,
-      color: isSelected ? AppColors.textDark : AppColors.textLight,
-      size: 28,
     );
   }
 }

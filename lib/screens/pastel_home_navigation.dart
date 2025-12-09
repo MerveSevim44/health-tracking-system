@@ -5,6 +5,12 @@ import 'package:health_care/screens/weekly_dashboard_screen.dart';
 import 'package:health_care/screens/insights_screen.dart';
 import 'package:health_care/screens/mood_selection_screen.dart';
 import 'package:health_care/screens/water/water_home_screen.dart';
+import 'package:health_care/screens/breathing_exercise_screen.dart';
+import 'package:health_care/screens/medication/medication_home_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:health_care/models/water_model.dart';
+import 'package:health_care/models/medication_model.dart';
+import 'package:health_care/models/mood_model.dart';
 
 // 📁 lib/screens/pastel_home_navigation.dart
 
@@ -18,10 +24,23 @@ class PastelHomeNavigation extends StatefulWidget {
 class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Firebase listeners after user is authenticated
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<WaterModel>().initialize();
+      context.read<MedicationModel>().initialize();
+      // MoodModel doesn't need initialize (loads on demand)
+    });
+  }
+
   final List<Widget> _screens = const [
     DailyMoodHomeScreen(),
     WeeklyDashboardScreen(),
     WaterHomeScreen(),
+    MedicationHomeScreen(),
+    BreathingExerciseScreen(),
     InsightsScreen(),
     ProfilePlaceholder(),
   ];
@@ -50,8 +69,10 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
                 _buildNavItem(Icons.home_outlined, 0),
                 _buildNavItem(Icons.bar_chart_outlined, 1),
                 _buildNavItem(Icons.water_drop_outlined, 2),
-                _buildNavItem(Icons.chat_bubble_outline, 3),
-                _buildNavItem(Icons.person_outline, 4),
+                _buildNavItem(Icons.medication_liquid, 3),
+                _buildNavItem(Icons.self_improvement, 4),
+                _buildNavItem(Icons.chat_bubble_outline, 5),
+                _buildNavItem(Icons.person_outline, 6),
               ],
             ),
           ),

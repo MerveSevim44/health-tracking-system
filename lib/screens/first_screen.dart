@@ -1,6 +1,7 @@
 // 📁 lib/screens/first_screen.dart (Hata Düzeltmeleri Yapıldı)
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Ana uygulama renkleri
 const Color primaryOrange = Color(0xFFFF7F00); // Ana turuncu renk
@@ -11,6 +12,34 @@ const Color white = Colors.white;
 
 class FirstScreen extends StatelessWidget {
   const FirstScreen({super.key});
+
+  Future<void> _signInAnonymously(BuildContext context) async {
+    try {
+      // Try to sign in with test email first (create if not exists)
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: 'test@test.com',
+          password: 'test123',
+        );
+      } catch (e) {
+        // If user doesn't exist, create it
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: 'test@test.com',
+          password: 'test123',
+        );
+      }
+      
+      if (context.mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Giriş hatası: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,9 +136,7 @@ class FirstScreen extends StatelessWidget {
                           width: double.infinity,
                           height: 55,
                           child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/home');
-                            },
+                            onPressed: () => _signInAnonymously(context),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryOrange,
                               shape: RoundedRectangleBorder(

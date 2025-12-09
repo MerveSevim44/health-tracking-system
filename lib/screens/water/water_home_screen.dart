@@ -30,19 +30,20 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
     return List.generate(7, (index) => monday.add(Duration(days: index)));
   }
 
-  void _addWater() {
+  void _addWater() async {
     if (_counterAmount > 0) {
       final waterModel = Provider.of<WaterModel>(context, listen: false);
       final drinkType = DrinkTypes.defaults[_selectedDrinkIndex];
       
-      waterModel.addWaterIntake(drinkType, _counterAmount);
+      await waterModel.addWaterIntake(drinkType, _counterAmount);
       
       setState(() {
         _counterAmount = 0;
       });
 
       // Check if goal achieved
-      if (waterModel.isGoalAchieved(_selectedDate)) {
+      final achieved = await waterModel.isGoalAchieved(_selectedDate);
+      if (achieved) {
         _showGoalAchievedScreen();
       }
     }

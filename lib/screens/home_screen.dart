@@ -2,31 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/mood_model.dart';
 import 'package:health_care/models/water_model.dart';
-import 'package:health_care/screens/breathing_exercise_screen.dart';
 import 'package:health_care/screens/chat.dart';
 import 'package:health_care/theme/water_theme.dart';
 
-// Geçici ChatScreen tanımı kaldırıldı, artık chat.dart kullanılıyor.
-
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  // Alt bar için mevcut sayfa indeksi
-  int _currentIndex = 2; // Sohbet sekmesi varsayılan olarak seçili
-
-  // Alt bar sayfaları
-  final List<Widget> _pages = [
-    // 0. İndeks: Nefes Egzersizi Sayfası
-    const BreathingExerciseScreen(),
-    const Center(child: Text('İstatistikler Sayfası')),
-    const MainContent(),
-    const Center(child: Text('Ayarlar Sayfası')),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         automaticallyImplyLeading: false,
       ),
-      // Body, seçili olan sayfayı gösterir
-      body: _pages[_currentIndex],
+      body: const MainContent(),
     );
   }
 }
@@ -82,12 +61,17 @@ class MainContent extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // 5. Eklenen Resim Widget'ı
+          // 5. Nefes Egzersizi Kartı
+          _buildBreathingCard(context, lightCardColor),
+
+          const SizedBox(height: 24),
+
+          // 6. Eklenen Resim Widget'ı
           _buildNatureImage(context, lightCardColor, greyText),
 
           const SizedBox(height: 40), // Boşluk ayarlandı.
 
-          // 6. Konuşmaya Hazır mısın? Kartı
+          // 7. Konuşmaya Hazır mısın? Kartı
           const ConversationCard(),
         ],
       ),
@@ -114,6 +98,82 @@ class MainContent extends StatelessWidget {
         ),
         Icon(Icons.calendar_today, color: Theme.of(context).iconTheme.color, size: 20),
       ],
+    );
+  }
+
+  Widget _buildBreathingCard(BuildContext context, Color lightCardColor) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6B8EFF), Color(0xFF8BA4FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6B8EFF).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.pushNamed(context, '/breathing'),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.spa_rounded,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Nefes Egzersizi',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Stres ve kaygıyı azaltmak için nefes al',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

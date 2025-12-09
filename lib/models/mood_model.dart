@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:health_care/services/mood_service.dart';
 
 class MoodModel extends ChangeNotifier {
+  final MoodService _service = MoodService();
   // --- YENİ EKLENEN KISIM ---
   // Ruh halleri indeksleri ve etiketleri
   final Map<int, String> _moodLabels = const {
@@ -19,11 +21,14 @@ class MoodModel extends ChangeNotifier {
 
   // Seçilen ruh halini tutar (Index olarak, 0: Mutlu, 1: Sakin, vb.)
   int? _selectedMoodIndex;
+  
+  // Selected emotions (multiple selection support for Firebase)
+  List<String> _selectedEmotions = [];
 
-  // !!! HATA GİDERİCİ DEĞİŞİKLİK BURADA !!!
-  // Eğer _selectedMoodIndex null ise, -1 döndürülerek her zaman int tipi garantilenir.
+  // Eğer _selectedMoodIndex null ise, -1 döndürür
   int get selectedMoodIndex => _selectedMoodIndex ?? -1;
-  // !!! HATA GİDERİCİ DEĞİŞİKLİK SONU !!!
+  
+  List<String> get selectedEmotions => _selectedEmotions;
 
   // Gün hakkındaki notu tutar
   String _dailyNote = '';
@@ -35,9 +40,74 @@ class MoodModel extends ChangeNotifier {
     notifyListeners(); // Arayüzü yeniden çizmek için dinleyicilere haber verir
   }
 
+  // Toggle emotion selection (for multiple emotions)
+  void toggleEmotion(String emotion) {
+    if (_selectedEmotions.contains(emotion)) {
+      _selectedEmotions.remove(emotion);
+    } else {
+      _selectedEmotions.add(emotion);
+    }
+    notifyListeners();
+  }
+
+  // Set emotions list
+  void setEmotions(List<String> emotions) {
+    _selectedEmotions = emotions;
+    notifyListeners();
+  }
+
   // Notu günceller
   void updateDailyNote(String note) {
     _dailyNote = note;
+    notifyListeners();
+  }
+
+  // Save mood to Firebase
+  Future<void> saveMood() async {
+    if (_selectedMoodIndex == null || _selectedMoodIndex! < 0) {
+      throw Exception('Please select a mood level');
+    }
+
+    // Convert index to 1-5 scale for Firebase
+    final moodLevel = _selectedMoodIndex! + 1;
+
+    await _service.addMood(
+      moodLevel: moodLevel,
+      emotions: _selectedEmotions,
+      notes: _dailyNote,
+      sentimentScore: 0.0,
+      sentimentMagnitude: 0.0,
+    );
+
+    notifyListeners();
+  }
+
+  // Load today's mood
+  Future<void> loadTodayMood() async {
+    final mood = await _service.getTodayMood();
+    if (mood != null) {
+      _selectedMoodIndex = mood.moodLevel - 1;
+      _selectedEmotions = mood.emotions;
+      _dailyNote = mood.notes;
+      notifyListeners();
+    }
+  }
+
+  // Get mood streak
+  Future<int> getMoodStreak() async {
+    return await _service.getMoodStreak();
+  }
+
+  // Get weekly mood data
+  Future<List<int>> getWeeklyMoodData() async {
+    return await _service.getWeeklyMoodData();
+  }
+
+  // Clear selection
+  void clearSelection() {
+    _selectedMoodIndex = null;
+    _selectedEmotions = [];
+    _dailyNote = '';
     notifyListeners();
   }
 }

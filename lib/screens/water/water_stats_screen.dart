@@ -117,8 +117,6 @@ class _WaterStatsScreenState extends State<WaterStatsScreen>
           ),
         ),
       ),
-      // Bottom navigation
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -283,50 +281,6 @@ class _WaterStatsScreenState extends State<WaterStatsScreen>
             style: WaterTextStyles.labelSmall,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: WaterShadows.soft,
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavIcon(Icons.water_drop, false, onTap: () {
-                Navigator.pop(context);
-              }),
-              _buildNavIcon(Icons.bar_chart, true),
-              _buildNavIcon(Icons.settings_outlined, false),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavIcon(IconData icon, bool isActive, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isActive
-              ? WaterColors.waterPrimary.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          color: isActive ? WaterColors.waterPrimary : WaterColors.textLight,
-          size: 28,
-        ),
       ),
     );
   }

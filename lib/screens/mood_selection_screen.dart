@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:health_care/theme/app_theme.dart';
 import 'package:health_care/widgets/mood_blob.dart';
 import 'package:health_care/widgets/pastel_components.dart';
+import 'package:health_care/widgets/mood/emotion_chips.dart';
+import 'package:health_care/models/mood_model.dart';
 
 // 📁 lib/screens/mood_selection_screen.dart
 
@@ -13,11 +16,40 @@ class MoodSelectionScreen extends StatefulWidget {
 }
 
 class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
-  int selectedMoodIndex = -1;
   final List<String> moodLabels = ['Great', 'Good', 'Neutral', 'Bad', 'Awful'];
+  final TextEditingController _notesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveMood() async {
+    final moodModel = Provider.of<MoodModel>(context, listen: false);
+    
+    try {
+      await moodModel.saveMood();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mood saved successfully!')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    return Consumer<MoodModel>(
+      builder: (context, moodModel, child) {
+        final selectedMoodIndex = moodModel.selectedMoodIndex;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: GradientBackground(
@@ -40,9 +72,11 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                     ),
                     const Spacer(),
                     IconButton(
-                      onPressed: () {},
+                      onPressed: selectedMoodIndex >= 0 ? _saveMood : null,
                       icon: const Icon(Icons.check),
-                      color: AppColors.textDark,
+                      color: selectedMoodIndex >= 0 
+                          ? AppColors.textDark 
+                          : AppColors.textLight,
                     ),
                   ],
                 ),
@@ -124,10 +158,53 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                       label: moodLabels[index],
                       isSelected: selectedMoodIndex == index,
                       onTap: () {
-                        setState(() {
-                          selectedMoodIndex = index;
-                        });
+                        moodModel.selectMood(index);
                       },
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ⭐ Emotion chips for multi-select
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'How are you feeling?',
+                      style: AppTextStyles.headlineMedium.copyWith(
+                        color: AppColors.textDark,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    EmotionChips(
+                      selectedEmotions: moodModel.selectedEmotions,
+                      onEmotionToggle: (emotion) => moodModel.toggleEmotion(emotion),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ⭐ Notes field
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: TextField(
+                  controller: _notesController,
+                  onChanged: (value) => moodModel.updateDailyNote(value),
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Add notes about your day...',
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.3),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
@@ -139,6 +216,8 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
         ),
       ),
     );
+        },
+      );
   }
 }
 
