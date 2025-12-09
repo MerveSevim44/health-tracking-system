@@ -5,6 +5,8 @@ import 'package:health_care/screens/weekly_dashboard_screen.dart';
 import 'package:health_care/screens/insights_screen.dart';
 import 'package:health_care/screens/mood_selection_screen.dart';
 import 'package:health_care/screens/water/water_home_screen.dart';
+import 'package:health_care/screens/breathing_exercise_screen.dart';
+import 'package:health_care/screens/medication/medication_home_screen.dart';
 
 // 📁 lib/screens/pastel_home_navigation.dart
 
@@ -22,6 +24,8 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
     DailyMoodHomeScreen(),
     WeeklyDashboardScreen(),
     WaterHomeScreen(),
+    MedicationHomeScreen(),
+    BreathingExerciseScreen(),
     InsightsScreen(),
     ProfilePlaceholder(),
   ];
@@ -50,8 +54,10 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
                 _buildNavItem(Icons.home_outlined, 0),
                 _buildNavItem(Icons.bar_chart_outlined, 1),
                 _buildNavItem(Icons.water_drop_outlined, 2),
-                _buildNavItem(Icons.chat_bubble_outline, 3),
-                _buildNavItem(Icons.person_outline, 4),
+                _buildNavItem(Icons.medication_liquid, 3),
+                _buildNavItem(Icons.self_improvement, 4),
+                _buildNavItem(Icons.chat_bubble_outline, 5),
+                _buildNavItem(Icons.person_outline, 6),
               ],
             ),
           ),
