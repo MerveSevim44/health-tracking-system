@@ -1,5 +1,6 @@
 // 📁 lib/screens/login_screen.dart
 
+
 import 'package:flutter/material.dart';
 // 🌟 EKLENDİ: AuthService ve HomeScreen importları
 import '../services/auth_service.dart';
@@ -213,4 +214,5 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
 }
