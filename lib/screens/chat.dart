@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:health_care/widgets/theme.dart';
+import 'package:health_care/theme/theme.dart';
 import 'package:health_care/models/mood_model.dart';
 import 'package:provider/provider.dart';
 
@@ -40,7 +40,6 @@ class _ChatScreenState extends State<ChatScreen> {
     4: "Kullanıcı kendini **Kızgın** hissettiğini belirtti. Cevapların sabırlı, nötr ve duyguyu kabul eden bir tonda olmalıdır. Sakinleşmesine yardımcı olacak adımlar önerebilir veya sadece duygusunu boşaltmasına izin verebilirsin. Asla savunmacı veya itirazcı olma.",
   };
 
-
   @override
   void initState() {
     super.initState();
@@ -53,27 +52,35 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendInitialMessage() {
     // MoodModel'i sadece okuma modunda (listen: false) kullanmak initState'te güvenlidir.
     final moodModel = Provider.of<MoodModel>(context, listen: false);
-    final selectedMoodIndex = moodModel.selectedMoodIndex; // MoodModel'den gelen int
+    final selectedMoodIndex =
+        moodModel.selectedMoodIndex; // MoodModel'den gelen int
 
     String initialPrompt = "";
 
     // Ruha göre karşılama metni
     switch (selectedMoodIndex) {
       case 0: // Mutlu
-        initialPrompt = "Harika! Enerjin bana da geçti! ${moodModel.getMoodLabel(selectedMoodIndex)} hissetmene sevindim. Bugün ne hakkında konuşmak istersin?";
+        initialPrompt =
+            "Harika! Enerjin bana da geçti! ${moodModel.getMoodLabel(selectedMoodIndex)} hissetmene sevindim. Bugün ne hakkında konuşmak istersin?";
         break;
       case 2: // Üzgün
-        initialPrompt = "Merhaba. Bugün kendini ${moodModel.getMoodLabel(selectedMoodIndex)} hissediyormuşsun. Unutma, burası yargılanmadan her şeyi paylaşabileceğin güvenli bir alan. Seni dinlemek için buradayım, nasılsın?";
+        initialPrompt =
+            "Merhaba. Bugün kendini ${moodModel.getMoodLabel(selectedMoodIndex)} hissediyormuşsun. Unutma, burası yargılanmadan her şeyi paylaşabileceğin güvenli bir alan. Seni dinlemek için buradayım, nasılsın?";
         break;
       case 3: // Kaygılı
-        initialPrompt = "Merhaba, ${moodModel.getMoodLabel(selectedMoodIndex)} hissettiğini görüyorum. Bir nefes al. Şu an ne seni en çok meşgul ediyor? Eğer konuşmak zorsa, sadece 'Buradayım' yazabilirsin.";
+        initialPrompt =
+            "Merhaba, ${moodModel.getMoodLabel(selectedMoodIndex)} hissettiğini görüyorum. Bir nefes al. Şu an ne seni en çok meşgul ediyor? Eğer konuşmak zorsa, sadece 'Buradayım' yazabilirsin.";
         break;
       default:
-        initialPrompt = "Merhaba! ${moodModel.getMoodLabel(selectedMoodIndex)} hissettiğini görüyorum. Seni dinliyorum. Bugün konuşmak istediğin konu ne?";
+        initialPrompt =
+            "Merhaba! ${moodModel.getMoodLabel(selectedMoodIndex)} hissettiğini görüyorum. Seni dinliyorum. Bugün konuşmak istediğin konu ne?";
     }
 
     setState(() {
-      _messages.insert(0, ChatMessage(text: initialPrompt, type: ChatMessageType.bot));
+      _messages.insert(
+        0,
+        ChatMessage(text: initialPrompt, type: ChatMessageType.bot),
+      );
     });
   }
 
@@ -98,42 +105,66 @@ class _ChatScreenState extends State<ChatScreen> {
     final selectedMoodIndex = moodModel.selectedMoodIndex;
 
     // Ruha özel sistem talimatını al
-    final systemPrompt = _moodPrompts[selectedMoodIndex] ??
+    final systemPrompt =
+        _moodPrompts[selectedMoodIndex] ??
         "Sen bir destekleyici yapay zeka asistansın. Daima nazik, empatik ve yargılayıcı olmayan bir tonda cevap ver.";
 
     // --- 2. API İstek Gövdesinin Hazırlanması (Örnek: Gemini API) ---
     try {
-      final response = await http.post(
-        Uri.parse(_geminiApiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
-        body: jsonEncode({
-          'contents': [
-            {'role': 'system', 'parts': [{'text': systemPrompt}]},
-            {'role': 'user', 'parts': [{'text': userMessage}]}
-          ],
-          'config': {'temperature': 0.7}
-        }),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            Uri.parse(_geminiApiUrl),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_apiKey',
+            },
+            body: jsonEncode({
+              'contents': [
+                {
+                  'role': 'system',
+                  'parts': [
+                    {'text': systemPrompt},
+                  ],
+                },
+                {
+                  'role': 'user',
+                  'parts': [
+                    {'text': userMessage},
+                  ],
+                },
+              ],
+              'config': {'temperature': 0.7},
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
       String botResponseText;
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(utf8.decode(response.bodyBytes));
-        botResponseText = responseData['candidates'][0]['content']['parts'][0]['text'];
+        botResponseText =
+            responseData['candidates'][0]['content']['parts'][0]['text'];
       } else {
-        print('API Hata Kodu: ${response.statusCode}');
-        botResponseText = "Üzgünüm, Yapay Zeka servisine bağlanırken bir sorun oluştu. (Hata Kodu: ${response.statusCode})";
+        debugPrint('API Hata Kodu: ${response.statusCode}');
+        botResponseText =
+            "Üzgünüm, Yapay Zeka servisine bağlanırken bir sorun oluştu. (Hata Kodu: ${response.statusCode})";
       }
 
       setState(() {
-        _messages.insert(0, ChatMessage(text: botResponseText, type: ChatMessageType.bot));
+        _messages.insert(
+          0,
+          ChatMessage(text: botResponseText, type: ChatMessageType.bot),
+        );
       });
     } catch (e) {
       setState(() {
-        _messages.insert(0, ChatMessage(text: "Bir bağlantı hatası oluştu: $e", type: ChatMessageType.bot));
+        _messages.insert(
+          0,
+          ChatMessage(
+            text: "Bir bağlantı hatası oluştu: $e",
+            type: ChatMessageType.bot,
+          ),
+        );
       });
     } finally {
       setState(() {
@@ -158,16 +189,20 @@ class _ChatScreenState extends State<ChatScreen> {
               onSubmitted: _handleSubmitted,
               decoration: InputDecoration.collapsed(
                 hintText: 'Mesajınızı yazın...',
-                hintStyle: TextStyle(color: greyText.withOpacity(0.7)),
+                hintStyle: TextStyle(color: greyText.withValues(alpha: 0.7)),
               ),
-              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
             ),
           ),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 4.0),
             child: IconButton(
               icon: Icon(Icons.send, color: Theme.of(context).primaryColor),
-              onPressed: _isLoading ? null : () => _handleSubmitted(_textController.text),
+              onPressed: _isLoading
+                  ? null
+                  : () => _handleSubmitted(_textController.text),
             ),
           ),
         ],
@@ -189,11 +224,9 @@ class _ChatScreenState extends State<ChatScreen> {
         toolbarHeight: 80,
         backgroundColor: Color(0xFF009000),
         foregroundColor: Colors.white,
-        title: Text('AI Asistanı - $moodLabel Modu',
-          style: TextStyle(
-            fontSize: 22,
-            color: Colors.white,
-          ),
+        title: Text(
+          'AI Asistanı - $moodLabel Modu',
+          style: TextStyle(fontSize: 22, color: Colors.white),
         ),
       ),
       // Klavye açılıp kapanırken takılmaları azaltmak için önerilen ayar.
@@ -204,17 +237,21 @@ class _ChatScreenState extends State<ChatScreen> {
             child: ListView.builder(
               padding: const EdgeInsets.all(8.0),
               reverse: true,
-              itemBuilder: (_, int index) => _MessageBubble(message: _messages[index]),
+              itemBuilder: (_, int index) =>
+                  _MessageBubble(message: _messages[index]),
               itemCount: _messages.length,
             ),
           ),
 
-          if (_isLoading) LinearProgressIndicator(color: Theme.of(context).primaryColor),
+          if (_isLoading)
+            LinearProgressIndicator(color: Theme.of(context).primaryColor),
 
           const Divider(height: 1.0),
 
           Container(
-            decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+            ),
             child: _buildTextComposer(),
           ),
         ],
@@ -231,11 +268,14 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final isUser = message.type == ChatMessageType.user;
-    final alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final alignment = isUser
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
     final color = isUser ? Theme.of(context).primaryColor : lightCardColor;
-    final textColor = isUser ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color;
+    final textColor = isUser
+        ? Colors.white
+        : Theme.of(context).textTheme.bodyMedium?.color;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10.0),
@@ -243,7 +283,9 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: alignment,
         children: [
           Container(
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
             padding: const EdgeInsets.all(12.0),
             decoration: BoxDecoration(
               color: color,
@@ -253,7 +295,14 @@ class _MessageBubble extends StatelessWidget {
                 bottomLeft: Radius.circular(isUser ? 15.0 : 0.0),
                 bottomRight: Radius.circular(isUser ? 0.0 : 15.0),
               ),
-              boxShadow: isUser ? null : [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 4)],
+              boxShadow: isUser
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                      ),
+                    ],
             ),
             child: Text(
               message.text,
