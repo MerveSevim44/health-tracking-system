@@ -8,14 +8,16 @@ import '../screens/pastel_home_navigation.dart'; // PastelHomeNavigation importu
 import '../theme/curved_app_bar.dart';
 import 'register_screen.dart';
 
-// Ana uygulama renkleri (Turuncu Tema)
-const Color primaryOrange = Color(0xFFFF7F00);
-const Color secondaryOrange = Color(0xFFFF9933);
-const Color accentOrange = Color(0xFFFF7F00);
+// Health Care Teması Renkleri (Yeşil - Sağlık Temalı)
+const Color primaryGreen = Color(0xFF009000); // Ana yeşil
+const Color secondaryGreen = Color(0xFF4CAF50); // Açık yeşil
+const Color accentGreen = Color(0xFF00C853); // Vurgulu yeşil
 const Color white = Colors.white;
-const Color darkGrey = Color(0xFF333333);
-const Color backgroundBeige = Color(0xFFFBF4EA);
-
+const Color darkText = Color(0xFF2C3E50); // Koyu metin
+const Color lightBackground = Color(
+  0xFFF0F9F0,
+); // Açık yeşilimsi beyaz arka plan
+const Color healthCardBg = Color(0xFFE8F5E9); // Sağlık kartları için açık yeşil
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -54,13 +56,19 @@ class _LoginScreenState extends State<LoginScreen> {
       // 2. ADIM: Başarılı yönlendirme (Uygulama geçmişini temizleyerek)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Giriş başarılı! Ana sayfaya yönlendiriliyorsunuz.'), backgroundColor: darkGrey),
+          const SnackBar(
+            content: Text('Giriş başarılı! Ana sayfaya yönlendiriliyorsunuz.'),
+            backgroundColor: primaryGreen,
+          ),
         );
 
         // 🔥 YÖNLENDİRME: PastelHomeNavigation (main.dart'taki '/home' rotasına)
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (Route<dynamic> route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+          (Route<dynamic> route) => false,
+        );
       }
-
     } catch (e) {
       // 3. ADIM: Hata mesajını göster
       if (mounted) {
@@ -81,7 +89,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen şifrenizi sıfırlamak için e-posta adresinizi girin.'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text(
+            'Lütfen şifrenizi sıfırlamak için e-posta adresinizi girin.',
+          ),
+          backgroundColor: accentGreen,
+        ),
       );
       return;
     }
@@ -96,7 +109,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Şifre sıfırlama bağlantısı $email adresine gönderildi.'), backgroundColor: primaryOrange),
+          SnackBar(
+            content: Text(
+              'Şifre sıfırlama bağlantısı $email adresine gönderildi.',
+            ),
+            backgroundColor: primaryGreen,
+          ),
         );
       }
     } catch (e) {
@@ -112,30 +130,40 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-
   // Özel Text Alanı Oluşturma Fonksiyonu (Aynı kaldı)
   Widget _buildMinimalTextField(
-      String label, IconData icon, bool isPassword, TextInputType keyboardType, TextEditingController controller) {
+    String label,
+    IconData icon,
+    bool isPassword,
+    TextInputType keyboardType,
+    TextEditingController controller,
+  ) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: isPassword,
-      style: const TextStyle(color: darkGrey),
+      style: const TextStyle(color: darkText),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: primaryOrange),
+        prefixIcon: Icon(icon, color: primaryGreen),
         filled: true,
-        fillColor: Colors.grey.shade100,
+        fillColor: healthCardBg,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10.0),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.0),
+          borderSide: BorderSide(
+            color: secondaryGreen.withValues(alpha: 0.3),
+            width: 1.0,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10.0),
-          borderSide: const BorderSide(color: primaryOrange, width: 2.0),
+          borderSide: const BorderSide(color: primaryGreen, width: 2.0),
         ),
-        labelStyle: const TextStyle(color: darkGrey),
-        contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
+        labelStyle: const TextStyle(color: darkText),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 15.0,
+          horizontal: 15.0,
+        ),
       ),
     );
   }
@@ -145,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: backgroundBeige,
+      backgroundColor: lightBackground,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -171,26 +199,66 @@ class _LoginScreenState extends State<LoginScreen> {
 
             // 2. GİRİŞ FORMU BÖLÜMÜ
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 30.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 30.0,
+                vertical: 30.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Hoş Geldiniz', style: TextStyle(color: darkGrey, fontSize: 26, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Hoş Geldiniz',
+                    style: TextStyle(
+                      color: darkText,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  const Text('Hesabınıza giriş yapınız.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  const Text(
+                    'Hesabınıza giriş yapınız.',
+                    style: TextStyle(
+                      color: primaryGreen,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Sağlığınızı takip edin 🌿',
+                    style: TextStyle(color: secondaryGreen, fontSize: 14),
+                  ),
                   const SizedBox(height: 30),
 
-                  _buildMinimalTextField('E-posta Adresi', Icons.email_outlined, false, TextInputType.emailAddress, _emailController),
+                  _buildMinimalTextField(
+                    'E-posta Adresi',
+                    Icons.email_outlined,
+                    false,
+                    TextInputType.emailAddress,
+                    _emailController,
+                  ),
                   const SizedBox(height: 15),
 
-                  _buildMinimalTextField('Şifre', Icons.lock_outline, true, TextInputType.visiblePassword, _passwordController),
+                  _buildMinimalTextField(
+                    'Şifre',
+                    Icons.lock_outline,
+                    true,
+                    TextInputType.visiblePassword,
+                    _passwordController,
+                  ),
 
                   // 🔥 GÜNCELLENDİ: Şifremi Unuttum Butonu, _resetPassword metoduna bağlandı.
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: _isLoading ? null : _resetPassword,
-                      child: Text('Şifremi Unuttum?', style: TextStyle(color: primaryOrange.withOpacity(0.7), fontSize: 14)),
+                      child: Text(
+                        'Şifremi Unuttum?',
+                        style: TextStyle(
+                          color: primaryGreen.withValues(alpha: 0.8),
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -202,13 +270,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _signInUser,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: accentOrange,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        backgroundColor: primaryGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                         elevation: 5,
                       ),
                       child: _isLoading
                           ? const CircularProgressIndicator(color: white)
-                          : const Text('Giriş Yap', style: TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          : const Text(
+                              'Giriş Yap',
+                              style: TextStyle(
+                                color: white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -221,7 +298,10 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Hesabın yok mu?', style: TextStyle(color: darkGrey)),
+                  const Text(
+                    'Hesabın yok mu?',
+                    style: TextStyle(color: darkText),
+                  ),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -231,7 +311,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       );
                     },
-                    child: const Text('Kayıt Ol', style: TextStyle(color: primaryOrange, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Kayıt Ol',
+                      style: TextStyle(
+                        color: primaryGreen,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
