@@ -7,10 +7,16 @@ import 'package:fl_chart/fl_chart.dart';
 // 📁 lib/screens/daily_mood_home_screen.dart
 
 class DailyMoodHomeScreen extends StatelessWidget {
-  const DailyMoodHomeScreen({super.key});
+
+  final String? username;
+
+  const DailyMoodHomeScreen({super.key, this.username});
 
   @override
   Widget build(BuildContext context) {
+    // Kullanıcı adını göstermek için varsayılan değer
+    final displayUsername = username ?? 'Misafir';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -19,19 +25,18 @@ class DailyMoodHomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              _buildHeader(),
+              // 🔥 KALDIRILDI: _buildHeader(displayUsername),
 
               const SizedBox(height: 32),
 
               // Greeting
-              const Text(
-                'Hello Ridgy! 👋',
+              Text(
+                'Merhaba ${displayUsername}! 👋',
                 style: AppTextStyles.displayMedium,
               ),
               const SizedBox(height: 4),
               Text(
-                'What\'s on your mind?',
+                'Aklında neler var?',
                 style: AppTextStyles.headlineMedium.copyWith(
                   fontWeight: FontWeight.w400,
                 ),
@@ -46,7 +51,7 @@ class DailyMoodHomeScreen extends StatelessWidget {
 
               // Daily Mood Log
               const Text(
-                'Daily Mood Log',
+                'Günlük Ruh Hali Kaydı',
                 style: AppTextStyles.headlineMedium,
               ),
 
@@ -61,13 +66,13 @@ class DailyMoodHomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Today\'s Task',
+                    'Bugünün Görevleri',
                     style: AppTextStyles.headlineMedium,
                   ),
                   TextButton(
                     onPressed: () {},
                     child: Text(
-                      'See All',
+                      'Tümünü Gör',
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: AppColors.moodCalm,
                         fontWeight: FontWeight.w600,
@@ -83,7 +88,7 @@ class DailyMoodHomeScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: StatsCard(
-                      title: 'Your Mood\nScore',
+                      title: 'Ruh Hali\nSkorun',
                       value: '7.5',
                       backgroundColor: AppColors.pastelYellow,
                       icon: const MoodBlob(
@@ -96,8 +101,8 @@ class DailyMoodHomeScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: StatsCard(
-                      title: 'Your Streak\nInformation',
-                      value: '12 Days',
+                      title: 'Seri\nBilgisi',
+                      value: '12 Gün',
                       backgroundColor: AppColors.pastelPeach,
                       icon: Container(
                         padding: const EdgeInsets.all(8),
@@ -132,48 +137,16 @@ class DailyMoodHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppColors.pastelMint,
-            shape: BoxShape.circle,
-            image: const DecorationImage(
-              image: NetworkImage('https://via.placeholder.com/48'),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        Row(
-          children: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.person_add_outlined),
-              color: AppColors.textDark,
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.add_circle_outline),
-              color: AppColors.textDark,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  // 🔥 KALDIRILDI: _buildHeader metodu silinmiştir.
 
   Widget _buildQuickActions() {
     return Row(
       children: [
-        _buildQuickActionChip('😊', 'Mood', AppColors.pastelYellow),
+        _buildQuickActionChip('😊', 'Ruh Hali', AppColors.pastelYellow),
         const SizedBox(width: 8),
-        _buildQuickActionChip('🧘', 'Meditation', AppColors.pastelLavender),
+        _buildQuickActionChip('🧘', 'Meditasyon', AppColors.pastelLavender),
         const SizedBox(width: 8),
-        _buildQuickActionChip('🎵', 'Music', AppColors.pastelPink),
+        _buildQuickActionChip('🎵', 'Müzik', AppColors.pastelPink),
       ],
     );
   }
@@ -202,11 +175,11 @@ class DailyMoodHomeScreen extends StatelessWidget {
 
   Widget _buildDailyMoodLog() {
     final moodData = [
-      {'day': 'Sat', 'color': AppColors.moodHappy},
-      {'day': 'Sun', 'color': AppColors.moodNeutral},
-      {'day': 'Mon', 'color': AppColors.moodCalm},
-      {'day': 'Tue', 'color': AppColors.moodSad},
-      {'day': 'Wed', 'color': AppColors.moodHappy},
+      {'day': 'Cmt', 'color': AppColors.moodHappy},
+      {'day': 'Paz', 'color': AppColors.moodNeutral},
+      {'day': 'Pzt', 'color': AppColors.moodCalm},
+      {'day': 'Sal', 'color': AppColors.moodSad},
+      {'day': 'Çar', 'color': AppColors.moodHappy},
     ];
 
     return PastelCard(
@@ -218,13 +191,13 @@ class DailyMoodHomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'This Week',
+                'Bu Hafta',
                 style: AppTextStyles.bodyLarge,
               ),
               TextButton(
                 onPressed: () {},
                 child: Text(
-                  'Skip Now',
+                  'Şimdi Atla',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.moodAnxious,
                     fontWeight: FontWeight.w600,
@@ -240,7 +213,7 @@ class DailyMoodHomeScreen extends StatelessWidget {
               return MoodTile(
                 day: data['day'] as String,
                 color: data['color'] as Color,
-                isToday: data['day'] == 'Wed',
+                isToday: data['day'] == 'Çar',
               );
             }).toList(),
           ),
@@ -259,13 +232,13 @@ class DailyMoodHomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Sleep Summary',
+                'Uyku Özeti',
                 style: AppTextStyles.headlineMedium,
               ),
               TextButton(
                 onPressed: () {},
                 child: Text(
-                  'Edit',
+                  'Düzenle',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.moodAnxious,
                     fontWeight: FontWeight.w600,
@@ -285,7 +258,7 @@ class DailyMoodHomeScreen extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        const times = ['11:00', '12:00', '01:00', '02:00', '03:00'];
+                        const times = ['23:00', '00:00', '01:00', '02:00', '03:00'];
                         if (value.toInt() < times.length) {
                           return Text(
                             times[value.toInt()],
@@ -334,7 +307,7 @@ class DailyMoodHomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildLegendItem(AppColors.pastelPink, 'Core'),
+              _buildLegendItem(AppColors.pastelPink, 'Temel'),
               _buildLegendItem(AppColors.moodHappy, 'REM'),
               _buildLegendItem(AppColors.pastelMint, 'Post-REM'),
             ],
@@ -346,9 +319,9 @@ class DailyMoodHomeScreen extends StatelessWidget {
 
   Widget _buildMyMood() {
     final moods = [
-      {'label': 'Sad pensive', 'percentage': '61%'},
-      {'label': 'Grateful', 'percentage': '15%'},
-      {'label': 'Angry', 'percentage': '24%'},
+      {'label': 'Üzgün düşünceli', 'percentage': '61%'},
+      {'label': 'Minnettar', 'percentage': '15%'},
+      {'label': 'Kızgın', 'percentage': '24%'},
     ];
 
     return PastelCard(
@@ -360,13 +333,13 @@ class DailyMoodHomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'My Mood',
+                'Ruh Hali Dağılımım',
                 style: AppTextStyles.headlineMedium,
               ),
               TextButton(
                 onPressed: () {},
                 child: Text(
-                  'See All',
+                  'Tümünü Gör',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.moodCalm,
                     fontWeight: FontWeight.w600,
