@@ -12,8 +12,10 @@ import 'package:health_care/models/water_model.dart';
 import 'package:health_care/models/medication_model.dart';
 import 'package:health_care/models/mood_model.dart';
 
-// 🔥 GEREKLİ: AuthService importu (Yolunuzun doğru olduğundan emin olun)
+// GEREKLİ: AuthService importu
 import '../services/auth_service.dart';
+// 🔥 YENİ EKRAN İMPORTU: Artık ProfilePlaceholder yerine ProfileScreen kullanılıyor.
+import 'profile_screen.dart';
 
 // 📁 lib/screens/pastel_home_navigation.dart
 
@@ -26,18 +28,15 @@ class PastelHomeNavigation extends StatefulWidget {
 
 class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
   int _currentIndex = 0;
-  // 🔥 EKLENDİ: Kullanıcı adını tutmak için değişken ve Future
-  String? _username;
+  String? _username; // Kullanıcı adını tutmak için değişken
   late Future<void> _initData;
 
   @override
   void initState() {
     super.initState();
-    // Veri model başlatmalarını ve kullanıcı adını çekme işlemini başlat
     _initData = _initializeData();
   }
 
-  // 🔥 EKLENDİ: Veri başlatma ve kullanıcı adını çekme fonksiyonu
   Future<void> _initializeData() async {
     // Model başlatmaları
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -54,30 +53,26 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
     }
   }
 
-  // DÜZELTME: Ekran listesi, 5 temel navigasyon öğesine uyacak şekilde kısaltıldı.
-  final List<Widget> _screens = const [
-    DailyMoodHomeScreen(),      // Index 0: Home (Günlük Ruh Hali)
-    WeeklyDashboardScreen(),    // Index 1: Dashboard (Haftalık Gösterge)
-    WaterHomeScreen(),          // Index 2: Water (Su Takibi)
-    MedicationHomeScreen(),     // Index 3: Medication (İlaç Takibi)
-    ProfilePlaceholder(),       // Index 4: Profile (Kullanıcı Profili)
-  ];
-
-  // 🔥 YÖNLENDİRME METODU: Kullanıcı adını alt widget'lara aktarmak için kullanılır
+  // 🔥 YÖNLENDİRME METODU: Kullanıcı adını alt widget'lara aktarır
   Widget _getScreen(int index) {
-    if (index == 0) {
-      // Eğer ana ekran (DailyMoodHomeScreen) kullanıcı adını gösteriyorsa,
-      // constructor üzerinden kullanıcı adını yollayabiliriz.
-      // Ancak DailyMoodHomeScreen'in constructor'ı değişmediği için varsayılanı kullanıyoruz.
-      // En iyi yöntem, bu veriyi Provider ile sağlamaktır.
-      // Şimdilik, verinin çekildiğini varsayalım.
+    // Tüm ekranlar dinamik olarak, _username verisi çekildikten sonra oluşturulur
+    final List<Widget> screens = [
+      DailyMoodHomeScreen(username: _username),  // Index 0: Kullanıcı adı aktarılıyor
+      const WeeklyDashboardScreen(),
+      const WaterHomeScreen(),
+      const MedicationHomeScreen(),
+      ProfileScreen(username: _username),       // Index 4: ProfileScreen'e aktarılıyor
+    ];
+
+    if (index >= 0 && index < screens.length) {
+      return screens[index];
     }
-    return _screens[index];
+    return const Center(child: Text("Hata: Geçersiz sayfa indeksi.", style: TextStyle(color: Colors.red)));
   }
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 EKLENDİ: Veri yüklenirken veya kullanıcı adı çekilirken yükleniyor ekranı göster
+    // Veri yüklenirken veya kullanıcı adı çekilirken yükleniyor ekranı göster
     return FutureBuilder(
         future: _initData,
         builder: (context, snapshot) {
@@ -95,7 +90,8 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.textLight.withValues(alpha: 0.1),
+                    // AppColors.textLight.withOpacity ile uyumlu olması beklenir
+                    color: AppColors.textLight.withOpacity(0.1),
                     blurRadius: 20,
                     offset: const Offset(0, -4),
                   ),
@@ -156,47 +152,5 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
   }
 }
 
-// ProfilePlaceholder (Aynı kalır)
-class ProfilePlaceholder extends StatelessWidget {
-  const ProfilePlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: const BoxDecoration(
-                color: AppColors.pastelLavender,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person_outline,
-                size: 50,
-                color: AppColors.textDark,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Profile',
-              style: AppTextStyles.displayMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              // Düzeltildi: Getter yerine yeni public metot kullanıldı
-              'Kullanıcı: ${AuthService().getCurrentUser()?.email ?? 'Yok'}',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// ⚠️ Not: ProfilePlaceholder sınıfı kaldırılmıştır. ProfileScreen widget'ı
+// ayrı bir dosyada tanımlı olmalıdır.

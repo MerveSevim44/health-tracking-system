@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
+// 🔥 YENİ: Shared Preferences importu eklendi
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -18,6 +20,7 @@ class AuthService {
   // 4. KULLANICI ADINI ÇEKME METODU
   // ----------------------------------------------------
   Future<String?> fetchUsername() async {
+// ... (Mevcut kod aynı kalır)
     final user = _auth.currentUser;
     if (user == null) {
       return null;
@@ -52,6 +55,7 @@ class AuthService {
   // ----------------------------------------------------
   // 1. KAYIT İŞLEMİ (Sign Up)
   // ----------------------------------------------------
+// ... (Mevcut kod aynı kalır)
   Future<void> registerUser({
     required String username,
     required String email,
@@ -111,6 +115,7 @@ class AuthService {
   // ----------------------------------------------------
   // 2. GİRİŞ İŞLEMİ (Sign In)
   // ----------------------------------------------------
+// ... (Mevcut kod aynı kalır)
   Future<void> signInUser({
     required String email,
     required String password,
@@ -140,6 +145,7 @@ class AuthService {
   // ----------------------------------------------------
   // 6. ŞİFRE SIFIRLAMA İŞLEMİ
   // ----------------------------------------------------
+// ... (Mevcut kod aynı kalır)
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
@@ -161,7 +167,49 @@ class AuthService {
   }
 
   // ----------------------------------------------------
+  // 7. OTURUMU KAPATMA İŞLEMİ
+  // ----------------------------------------------------
+// ... (Mevcut kod aynı kalır)
+  Future<void> signOut() async {
+    try {
+      // Firebase Auth üzerinden çıkış yapılır
+      await _auth.signOut();
+      debugPrint('Kullanıcı çıkış yaptı.');
+    } catch (e) {
+      debugPrint('Çıkış hatası: $e');
+      // Hatanın uygulama arayüzünde görünmesi için fırlatılır
+      throw 'Oturumu kapatırken bir hata oluştu: $e';
+    }
+  }
+
+  // ----------------------------------------------------
   // 3. OTURUM DURUMU (Stream)
   // ----------------------------------------------------
   Stream<User?> get user => _auth.authStateChanges();
+
+  // ----------------------------------------------------
+  // 8. YEREL DEPOLAMA METOTLARI (YENİ EKLENDİ)
+  // ----------------------------------------------------
+
+  /// Kullanıcı adını yerel depolamadan getirir.
+  Future<String?> getLocalUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('local_username');
+  }
+
+  /// Kullanıcı adını yerel depolamaya kaydeder.
+  Future<void> saveLocalUsername(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('local_username', username);
+  }
+
+  /// Firebase'den çektiği ilk kullanıcı adını yerel depolamaya kaydeder (Sadece ilk çalıştırmada veya yerel veri yoksa)
+  Future<String?> fetchAndSaveInitialUsername() async {
+    final firebaseUsername = await fetchUsername(); // Mevcut Firebase metodunu kullan
+    if (firebaseUsername != null) {
+      await saveLocalUsername(firebaseUsername); // Yerel depoya kaydet
+      return firebaseUsername;
+    }
+    return null;
+  }
 }
