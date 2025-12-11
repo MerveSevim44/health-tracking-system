@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/medication_model.dart';
+import 'package:health_care/models/medication_firebase_model.dart';
 import 'package:health_care/widgets/medication/day_selector.dart';
-import 'package:health_care/widgets/medication/medication_card.dart';
+import 'package:health_care/widgets/medication/medication_intake_card.dart';
+import 'package:health_care/screens/medication/medication_detail_enhanced_screen.dart';
 import 'package:health_care/theme/app_theme.dart';
 
 // 📁 lib/screens/medication/medication_home_screen.dart
@@ -16,6 +18,54 @@ class MedicationHomeScreen extends StatefulWidget {
 
 class _MedicationHomeScreenState extends State<MedicationHomeScreen> {
   DateTime _selectedDate = DateTime.now();
+  bool _isLoading = true;
+  List<MedicationFirebase> _medications = [];
+  Map<String, List<MedicationIntake>> _intakesByMedication = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final model = context.read<MedicationModel>();
+      
+      // Ensure model is initialized
+      if (model.medicationsFirebase.isEmpty) {
+        model.initialize();
+        // Wait a bit for Firebase to load
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      final allMedications = model.medicationsFirebase
+          .where((med) => med.active)
+          .toList();
+      
+      // Load intakes for each medication on selected date
+      final Map<String, List<MedicationIntake>> intakesMap = {};
+      for (final med in allMedications) {
+        final intakes = await model.getIntakesForMedicationOnDate(
+          medicationId: med.id,
+          date: _selectedDate,
+        );
+        // Store intakes even if empty - we want to show all medications
+        intakesMap[med.id] = intakes;
+      }
+      
+      setState(() {
+        _medications = allMedications;
+        _intakesByMedication = intakesMap;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading medications: $e');
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,42 +74,67 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             _buildHeader(context),
             const SizedBox(height: 20),
-
-            // Day Selector
             DaySelector(
               selectedDate: _selectedDate,
               onDateSelected: (date) {
                 setState(() {
                   _selectedDate = date;
                 });
+                _loadData();
               },
             ),
             const SizedBox(height: 24),
-
-            // Medications List
             Expanded(
-              child: _buildMedicationsList(context),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildMedicationsList(),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, '/medication/add');
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.pushNamed(context, '/medication/add');
+          _loadData();
         },
         backgroundColor: const Color(0xFF9D84FF),
-        elevation: 4,
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
+        elevation: 6,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Add Medication',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+    final totalIntakes = _intakesByMedication.values.fold<int>(
+      0,
+      (sum, intakes) => sum + intakes.length,
+    );
+    final takenIntakes = _intakesByMedication.values.fold<int>(
+      0,
+      (sum, intakes) => sum + intakes.where((i) => i.taken).length,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF9D84FF).withValues(alpha: 0.1),
+            const Color(0xFFB8A4FF).withValues(alpha: 0.05),
+          ],
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -67,151 +142,173 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Medication',
+                'Medications',
                 style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w300,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.textDark,
-                  letterSpacing: -0.5,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE8DEFF), Color(0xFFF3EFFF)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFF9D84FF),
-                  size: 24,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 18,
+                      color: Color(0xFF06D6A0),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$takenIntakes/$totalIntakes',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Consumer<MedicationModel>(
-            builder: (context, model, child) {
-              return FutureBuilder<Map<String, int>>(
-                future: Future.wait([
-                  model.getTodayCompletionCount(),
-                  model.getTodayTotalCount(),
-                ]).then((values) => {'completed': values[0], 'total': values[1]}),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return Text(
-                      'Loading...',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textLight,
-                      ),
-                    );
-                  }
-                  final completed = snapshot.data!['completed'] ?? 0;
-                  final total = snapshot.data!['total'] ?? 0;
-                  return Text(
-                    '$completed of $total medications taken today',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textLight,
-                    ),
-                  );
-                },
-              );
-            },
+          const SizedBox(height: 8),
+          Text(
+            'Track your daily medication schedule',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textLight,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMedicationsList(BuildContext context) {
-    return Consumer<MedicationModel>(
-      builder: (context, model, child) {
-        final medications = model.getMedicationsForDay(_selectedDate);
+  Widget _buildMedicationsList() {
+    if (_medications.isEmpty) {
+      return _buildEmptyState();
+    }
 
-        if (medications.isEmpty) {
-          return _buildEmptyState();
+    // Group by period - show all medications with their frequency
+    final Map<String, List<MapEntry<MedicationFirebase, MedicationIntake?>>> groupedByPeriod = {
+      'morning': [],
+      'afternoon': [],
+      'evening': [],
+    };
+
+    for (final med in _medications) {
+      final intakes = _intakesByMedication[med.id] ?? [];
+      
+      // If medication has intakes for this date, show them
+      if (intakes.isNotEmpty) {
+        for (final intake in intakes) {
+          final period = intake.period ?? 'morning';
+          groupedByPeriod[period]?.add(MapEntry(med, intake));
         }
+      } else {
+        // No intakes yet - show based on frequency
+        if (med.frequency.morning) {
+          groupedByPeriod['morning']?.add(MapEntry(med, null));
+        }
+        if (med.frequency.afternoon) {
+          groupedByPeriod['afternoon']?.add(MapEntry(med, null));
+        }
+        if (med.frequency.evening) {
+          groupedByPeriod['evening']?.add(MapEntry(med, null));
+        }
+      }
+    }
 
-        // Group by category
-        final morning = medications
-            .where((m) => m.category == MedicationCategory.morning)
-            .toList();
-        final afternoon = medications
-            .where((m) => m.category == MedicationCategory.afternoon)
-            .toList();
-        final evening = medications
-            .where((m) => m.category == MedicationCategory.evening)
-            .toList();
-        final night = medications
-            .where((m) => m.category == MedicationCategory.night)
-            .toList();
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 80),
+      children: [
+        if (groupedByPeriod['morning']!.isNotEmpty) ...[
+          _buildCategoryHeader('Morning', Icons.wb_sunny, const Color(0xFFFFD166)),
+          ...groupedByPeriod['morning']!.map((entry) => _buildIntakeCard(entry.key, entry.value, 'morning')),
+          const SizedBox(height: 8),
+        ],
+        if (groupedByPeriod['afternoon']!.isNotEmpty) ...[
+          _buildCategoryHeader('Afternoon', Icons.wb_sunny_outlined, const Color(0xFF06D6A0)),
+          ...groupedByPeriod['afternoon']!.map((entry) => _buildIntakeCard(entry.key, entry.value, 'afternoon')),
+          const SizedBox(height: 8),
+        ],
+        if (groupedByPeriod['evening']!.isNotEmpty) ...[
+          _buildCategoryHeader('Evening', Icons.nights_stay_outlined, const Color(0xFF9D84FF)),
+          ...groupedByPeriod['evening']!.map((entry) => _buildIntakeCard(entry.key, entry.value, 'evening')),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
 
-        return ListView(
-          physics: const BouncingScrollPhysics(),
-          children: [
-            if (morning.isNotEmpty) ...[
-              _buildCategoryHeader('Morning', Icons.wb_sunny, const Color(0xFFFFD166)),
-              ...morning.map((med) => MedicationCard(
-                    medication: med,
-                    onTap: () => _navigateToDetail(context, med),
-                  )),
-              const SizedBox(height: 16),
-            ],
-            if (afternoon.isNotEmpty) ...[
-              _buildCategoryHeader('Afternoon', Icons.wb_sunny_outlined, const Color(0xFF06D6A0)),
-              ...afternoon.map((med) => MedicationCard(
-                    medication: med,
-                    onTap: () => _navigateToDetail(context, med),
-                  )),
-              const SizedBox(height: 16),
-            ],
-            if (evening.isNotEmpty) ...[
-              _buildCategoryHeader('Evening', Icons.nights_stay_outlined, const Color(0xFF9D84FF)),
-              ...evening.map((med) => MedicationCard(
-                    medication: med,
-                    onTap: () => _navigateToDetail(context, med),
-                  )),
-              const SizedBox(height: 16),
-            ],
-            if (night.isNotEmpty) ...[
-              _buildCategoryHeader('Night', Icons.dark_mode, const Color(0xFF118AB2)),
-              ...night.map((med) => MedicationCard(
-                    medication: med,
-                    onTap: () => _navigateToDetail(context, med),
-                  )),
-              const SizedBox(height: 16),
-            ],
-            const SizedBox(height: 80), // Space for FAB
-          ],
-        );
-      },
+  Widget _buildIntakeCard(MedicationFirebase medication, MedicationIntake? intake, String period) {
+    return MedicationIntakeCard(
+      medication: medication,
+      intake: intake,
+      period: period,
+      onTap: () => _navigateToDetail(medication),
+      onCheck: intake != null ? () => _toggleIntake(medication.id, intake) : null,
     );
   }
 
   Widget _buildCategoryHeader(String title, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.08),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+              color: color.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: color,
-            ),
+            child: Icon(icon, size: 22, color: color),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Text(
             title,
-            style: AppTextStyles.headlineMedium.copyWith(
-              fontWeight: FontWeight.w600,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -221,48 +318,114 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF3EFFF),
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF9D84FF).withValues(alpha: 0.2),
+                    const Color(0xFFB8A4FF).withValues(alpha: 0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF9D84FF).withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.medical_services_outlined,
+                size: 80,
+                color: Color(0xFF9D84FF),
+              ),
             ),
-            child: const Icon(
-              Icons.medication_liquid,
-              size: 60,
-              color: Color(0xFF9D84FF),
+            const SizedBox(height: 32),
+            const Text(
+              'No medications scheduled',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+                letterSpacing: 0.3,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'No medications',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textDark,
+            const SizedBox(height: 14),
+            const Text(
+              'Add your first medication to start tracking',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.textLight,
+                letterSpacing: 0.2,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap + to add your first medication',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textLight,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  void _navigateToDetail(BuildContext context, Medication medication) {
-    Navigator.pushNamed(
+  void _navigateToDetail(MedicationFirebase medication) {
+    Navigator.push(
       context,
-      '/medication/detail',
-      arguments: medication,
-    );
+      MaterialPageRoute(
+        builder: (context) => MedicationDetailEnhancedScreen(
+          medication: medication,
+        ),
+      ),
+    ).then((_) => _loadData());
+  }
+
+  Future<void> _toggleIntake(String medicationId, MedicationIntake intake) async {
+    try {
+      await context.read<MedicationModel>().updateIntakeStatus(
+            medicationId: medicationId,
+            intakeId: intake.id,
+            taken: !intake.taken,
+          );
+      
+      await _loadData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  intake.taken ? Icons.undo : Icons.check_circle,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Text(intake.taken ? 'Marked as not taken' : 'Marked as taken'),
+              ],
+            ),
+            backgroundColor: intake.taken ? Colors.grey : const Color(0xFF06D6A0),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

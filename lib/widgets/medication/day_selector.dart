@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 // 📁 lib/widgets/medication/day_selector.dart
 
-class DaySelector extends StatelessWidget {
+class DaySelector extends StatefulWidget {
   final DateTime selectedDate;
   final Function(DateTime) onDateSelected;
 
@@ -14,23 +14,79 @@ class DaySelector extends StatelessWidget {
   });
 
   @override
+  State<DaySelector> createState() => _DaySelectorState();
+}
+
+class _DaySelectorState extends State<DaySelector> {
+  late ScrollController _scrollController;
+  static const double _itemWidth = 82.0; // 70 width + 12 margin
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+
+    // Scroll to selected date after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToSelectedDate();
+    });
+  }
+
+  @override
+  void didUpdateWidget(DaySelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isSameDay(oldWidget.selectedDate, widget.selectedDate)) {
+      _scrollToSelectedDate();
+    }
+  }
+
+  void _scrollToSelectedDate() {
+    final now = DateTime.now();
+    final startDate = now.subtract(
+      const Duration(days: 60),
+    ); // 60 days before today
+    final daysDifference = widget.selectedDate.difference(startDate).inDays;
+
+    if (daysDifference >= 0 && _scrollController.hasClients) {
+      final scrollPosition =
+          (daysDifference * _itemWidth) -
+          (MediaQuery.of(context).size.width / 2) +
+          (_itemWidth / 2);
+      _scrollController.animateTo(
+        scrollPosition.clamp(0.0, _scrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
+    // Show 60 days before and 60 days after today (120 days total)
+    final startDate = now.subtract(const Duration(days: 60));
+    final totalDays = 120;
 
     return SizedBox(
       height: 90,
       child: ListView.builder(
+        controller: _scrollController,
         scrollDirection: Axis.horizontal,
-        itemCount: 7,
+        itemCount: totalDays,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         itemBuilder: (context, index) {
-          final date = startOfWeek.add(Duration(days: index));
-          final isSelected = _isSameDay(date, selectedDate);
+          final date = startDate.add(Duration(days: index));
+          final isSelected = _isSameDay(date, widget.selectedDate);
           final isToday = _isSameDay(date, now);
 
           return GestureDetector(
-            onTap: () => onDateSelected(date),
+            onTap: () => widget.onDateSelected(date),
             child: Container(
               width: 70,
               margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -79,12 +135,17 @@ class DaySelector extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : const Color(0xFF2D3436),
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF2D3436),
                     ),
                   ),
                   const SizedBox(height: 4),
                   // Medication load indicator
-                  _buildMedicationIndicator(isSelected, _getMedicationCount(date)),
+                  _buildMedicationIndicator(
+                    isSelected,
+                    _getMedicationCount(date),
+                  ),
                 ],
               ),
             ),

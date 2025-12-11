@@ -7,12 +7,14 @@ import 'package:health_care/widgets/medication/pill_icon.dart';
 class MedicationCard extends StatelessWidget {
   final Medication medication;
   final VoidCallback? onTap;
+  final VoidCallback? onTakeMedication;
   final bool showCategory;
 
   const MedicationCard({
     super.key,
     required this.medication,
     this.onTap,
+    this.onTakeMedication,
     this.showCategory = true,
   });
 
@@ -68,15 +70,37 @@ class MedicationCard extends StatelessWidget {
                       color: Color(0xFF2D3436),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
+                  // Dosage with icon
                   Row(
                     children: [
-                      Text(
-                        medication.dosage,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF8B92A0).withValues(alpha: 0.8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: medication.color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.medication_liquid,
+                              size: 14,
+                              color: medication.color,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              medication.dosage,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: medication.color,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       if (showCategory) ...[
@@ -84,10 +108,10 @@ class MedicationCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 2,
+                            vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: medication.color.withValues(alpha: 0.2),
+                            color: medication.color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -102,10 +126,32 @@ class MedicationCard extends StatelessWidget {
                       ],
                     ],
                   ),
+                  // Meal timing if not anytime
+                  if (medication.mealTiming != MealTiming.anytime) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.restaurant,
+                          size: 13,
+                          color: const Color(0xFF8B92A0).withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          _getMealTimingText(medication.mealTiming),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF8B92A0).withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
-            // Time
+            // Time and Check Button
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -138,6 +184,31 @@ class MedicationCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 8),
+                // Take Medication Button
+                if (onTakeMedication != null)
+                  GestureDetector(
+                    onTap: onTakeMedication,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: medication.color,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: medication.color.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
                 if (medication.mealTiming != MealTiming.anytime) ...[
                   const SizedBox(height: 6),
                   Row(

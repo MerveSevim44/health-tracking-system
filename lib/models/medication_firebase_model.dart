@@ -54,6 +54,9 @@ class MedicationFirebase {
   final String startDate; // ISO string
   final bool active;
   final MedicationFrequency frequency;
+  final String? type; // Medication type (tablet, syrup, etc.)
+  final int? totalAmount; // Total amount of medication (pills, ml, etc.)
+  final String? endDate; // Calculated or manual end date
 
   const MedicationFirebase({
     required this.id,
@@ -63,10 +66,13 @@ class MedicationFirebase {
     required this.startDate,
     this.active = true,
     required this.frequency,
+    this.type,
+    this.totalAmount,
+    this.endDate,
   });
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = {
       'name': name,
       'dosage': dosage,
       'instructions': instructions,
@@ -74,9 +80,39 @@ class MedicationFirebase {
       'active': active,
       'frequency': frequency.toJson(),
     };
+    
+    if (type != null) json['type'] = type!;
+    if (totalAmount != null) json['totalAmount'] = totalAmount!;
+    if (endDate != null) json['endDate'] = endDate!;
+    
+    return json;
   }
 
   factory MedicationFirebase.fromJson(String id, Map<String, dynamic> json) {
+    // Parse frequency field safely - handle both object and string formats
+    MedicationFrequency frequency;
+    
+    if (json['frequency'] == null) {
+      // No frequency data - use default (all false)
+      frequency = const MedicationFrequency();
+    } else if (json['frequency'] is Map) {
+      // New format: frequency is an object
+      frequency = MedicationFrequency.fromJson(
+        Map<String, dynamic>.from(json['frequency'] as Map)
+      );
+    } else if (json['frequency'] is String) {
+      // Old format: frequency is a string - convert to object
+      final freqString = (json['frequency'] as String).toLowerCase();
+      frequency = MedicationFrequency(
+        morning: freqString.contains('morning') || freqString.contains('sabah'),
+        afternoon: freqString.contains('afternoon') || freqString.contains('öğle'),
+        evening: freqString.contains('evening') || freqString.contains('akşam'),
+      );
+    } else {
+      // Unknown format - use default
+      frequency = const MedicationFrequency();
+    }
+    
     return MedicationFirebase(
       id: id,
       name: json['name'] as String? ?? '',
@@ -84,9 +120,10 @@ class MedicationFirebase {
       instructions: json['instructions'] as String? ?? '',
       startDate: json['startDate'] as String? ?? DateTime.now().toIso8601String(),
       active: json['active'] as bool? ?? true,
-      frequency: json['frequency'] != null
-          ? MedicationFrequency.fromJson(json['frequency'] as Map<String, dynamic>)
-          : const MedicationFrequency(),
+      frequency: frequency,
+      type: json['type'] as String?,
+      totalAmount: json['totalAmount'] as int?,
+      endDate: json['endDate'] as String?,
     );
   }
 
@@ -97,6 +134,9 @@ class MedicationFirebase {
     String? startDate,
     bool? active,
     MedicationFrequency? frequency,
+    String? type,
+    int? totalAmount,
+    String? endDate,
   }) {
     return MedicationFirebase(
       id: id,
@@ -106,6 +146,9 @@ class MedicationFirebase {
       startDate: startDate ?? this.startDate,
       active: active ?? this.active,
       frequency: frequency ?? this.frequency,
+      type: type ?? this.type,
+      totalAmount: totalAmount ?? this.totalAmount,
+      endDate: endDate ?? this.endDate,
     );
   }
 
@@ -131,45 +174,74 @@ class MedicationIntake {
   final String medicationId;
   final String date; // ISO string
   final String notes;
-  final String takenStatus; // "take" | "skip" | "postpone"
+  final bool taken; // true if taken, false if not
+  final String? plannedTime; // HH:mm format
+  final String? plannedDose; // e.g., "1 pill", "5 ml"
+  final String? period; // 'morning', 'afternoon', or 'evening'
 
   const MedicationIntake({
     required this.id,
     required this.medicationId,
     required this.date,
     this.notes = '',
-    required this.takenStatus,
+    required this.taken,
+    this.plannedTime,
+    this.plannedDose,
+    this.period,
   });
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = {
       'date': date,
       'notes': notes,
-      'takenStatus': takenStatus,
+      'taken': taken,
     };
+    
+    if (plannedTime != null) json['plannedTime'] = plannedTime!;
+    if (plannedDose != null) json['plannedDose'] = plannedDose!;
+    if (period != null) json['period'] = period!;
+    
+    return json;
   }
 
   factory MedicationIntake.fromJson(String id, String medicationId, Map<String, dynamic> json) {
+    // Support legacy takenStatus field
+    bool taken = false;
+    if (json.containsKey('taken')) {
+      taken = json['taken'] as bool? ?? false;
+    } else if (json.containsKey('takenStatus')) {
+      taken = json['takenStatus'] == 'take';
+    }
+    
     return MedicationIntake(
       id: id,
       medicationId: medicationId,
       date: json['date'] as String? ?? DateTime.now().toIso8601String(),
       notes: json['notes'] as String? ?? '',
-      takenStatus: json['takenStatus'] as String? ?? 'skip',
+      taken: taken,
+      plannedTime: json['plannedTime'] as String?,
+      plannedDose: json['plannedDose'] as String?,
+      period: json['period'] as String?,
     );
   }
 
   MedicationIntake copyWith({
     String? date,
     String? notes,
-    String? takenStatus,
+    bool? taken,
+    String? plannedTime,
+    String? plannedDose,
+    String? period,
   }) {
     return MedicationIntake(
       id: id,
       medicationId: medicationId,
       date: date ?? this.date,
       notes: notes ?? this.notes,
-      takenStatus: takenStatus ?? this.takenStatus,
+      taken: taken ?? this.taken,
+      plannedTime: plannedTime ?? this.plannedTime,
+      plannedDose: plannedDose ?? this.plannedDose,
+      period: period ?? this.period,
     );
   }
 }
@@ -193,33 +265,4 @@ extension MedicationFirebaseUI on MedicationFirebase {
   }
 }
 
-/// Helper to convert takenStatus string to enum-like values
-enum TakenStatus {
-  take,
-  skip,
-  postpone;
 
-  static TakenStatus fromString(String status) {
-    switch (status.toLowerCase()) {
-      case 'take':
-        return TakenStatus.take;
-      case 'skip':
-        return TakenStatus.skip;
-      case 'postpone':
-        return TakenStatus.postpone;
-      default:
-        return TakenStatus.skip;
-    }
-  }
-
-  String get value {
-    switch (this) {
-      case TakenStatus.take:
-        return 'take';
-      case TakenStatus.skip:
-        return 'skip';
-      case TakenStatus.postpone:
-        return 'postpone';
-    }
-  }
-}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:health_care/services/mood_service.dart';
+import 'package:health_care/models/mood_firebase_model.dart';
 
 class MoodModel extends ChangeNotifier {
   final MoodService _service = MoodService();
@@ -103,6 +104,20 @@ class MoodModel extends ChangeNotifier {
     return await _service.getWeeklyMoodData();
   }
 
+  // Get last 7 mood entries for a user
+  Future<List<MoodEntry>> getLast7Moods(String uid) async {
+    final firebaseMoods = await _service.getLast7Moods(uid);
+    
+    // Convert MoodFirebase to MoodEntry (UI model)
+    return firebaseMoods.map((fb) => MoodEntry(
+      date: DateTime.parse(fb.date),
+      moodLevel: fb.moodLevel,
+      emotions: fb.emotions,
+      sentimentScore: fb.sentimentScore,
+      notes: fb.notes.isEmpty ? null : fb.notes,
+    )).toList();
+  }
+
   // Clear selection
   void clearSelection() {
     _selectedMoodIndex = null;
@@ -110,4 +125,21 @@ class MoodModel extends ChangeNotifier {
     _dailyNote = '';
     notifyListeners();
   }
+}
+
+/// UI-friendly mood entry model
+class MoodEntry {
+  final DateTime date;
+  final int moodLevel;
+  final List<String> emotions;
+  final double sentimentScore;
+  final String? notes;
+
+  MoodEntry({
+    required this.date,
+    required this.moodLevel,
+    required this.emotions,
+    this.sentimentScore = 0.0,
+    this.notes,
+  });
 }

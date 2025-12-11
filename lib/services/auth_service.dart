@@ -71,6 +71,18 @@ class AuthService {
           'username': username.trim(),
           'email': email.trim(),
           'createdAt': ServerValue.timestamp,
+          'notificationPreferences': {
+            'waterReminders': true,
+            'medicationReminders': true,
+            'appointmentReminders': true,
+            'moodCheckinReminder': false,
+          },
+          'aiCoach': {
+            'enabled': true,
+            'preferredTime': '09:00',
+            'tone': 'gentle',
+            'dailyTips': true,
+          }
         });
       }
 

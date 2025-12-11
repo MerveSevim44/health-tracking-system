@@ -227,4 +227,63 @@ class MoodService {
 
     return weeklyData;
   }
+
+  /// Get last 7 mood entries for a specific user
+  /// Returns the most recent 7 mood entries sorted by date (descending)
+  /// Safe parsing: skips entries with missing required fields
+  Future<List<MoodFirebase>> getLast7Moods(String uid) async {
+    try {
+      // Get reference to the specified user's moods
+      final ref = _database.ref('moods/$uid');
+      final snapshot = await ref.get();
+      
+      // Check if data exists
+      final data = snapshot.value as Map<dynamic, dynamic>?;
+      if (data == null) return [];
+
+      // Parse all mood entries with safe error handling
+      final List<MoodFirebase> allMoods = [];
+      
+      for (var entry in data.entries) {
+        try {
+          final moodId = entry.key as String;
+          final moodData = entry.value as Map<dynamic, dynamic>;
+          
+          // Skip if essential fields are missing
+          if (!moodData.containsKey('date') || !moodData.containsKey('moodLevel')) {
+            continue;
+          }
+          
+          // Safe parsing with defaults
+          final mood = MoodFirebase(
+            id: moodId,
+            date: moodData['date'] as String? ?? DateTime.now().toIso8601String(),
+            moodLevel: moodData['moodLevel'] as int? ?? 3,
+            emotions: (moodData['emotions'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ?? 
+                [],
+            notes: moodData['notes'] as String? ?? '',
+            sentimentScore: (moodData['sentimentScore'] as num?)?.toDouble() ?? 0.0,
+            sentimentMagnitude: (moodData['sentimentMagnitude'] as num?)?.toDouble() ?? 0.0,
+          );
+          
+          allMoods.add(mood);
+        } catch (e) {
+          // Skip invalid entries
+          continue;
+        }
+      }
+      
+      // Sort by date descending (most recent first)
+      allMoods.sort((a, b) => b.date.compareTo(a.date));
+      
+      // Take only the first 7 entries
+      return allMoods.take(7).toList();
+      
+    } catch (e) {
+      // Return empty list on any error
+      return [];
+    }
+  }
 }

@@ -38,24 +38,11 @@ class WaterIntakeEntry {
 
   // Convert from Firebase model
   factory WaterIntakeEntry.fromFirebase(WaterLogFirebase fb) {
-    // Map drinkType string to DrinkType object
-    DrinkType drinkType;
-    switch (fb.drinkType.toLowerCase()) {
-      case 'water':
-        drinkType = DrinkTypes.defaults[0];
-        break;
-      case 'coffee':
-        drinkType = DrinkTypes.defaults[1];
-        break;
-      case 'tea':
-        drinkType = DrinkTypes.defaults[2];
-        break;
-      case 'matcha':
-        drinkType = DrinkTypes.defaults[3];
-        break;
-      default:
-        drinkType = DrinkTypes.defaults[0];
-    }
+    // Find matching drink type by name (case-insensitive)
+    final drinkType = DrinkTypes.defaults.firstWhere(
+      (d) => d.name.toLowerCase() == fb.drinkType.toLowerCase(),
+      orElse: () => DrinkTypes.defaults[0], // Default to water if not found
+    );
 
     return WaterIntakeEntry(
       drinkType: drinkType,
@@ -87,11 +74,15 @@ class WaterModel extends ChangeNotifier {
     });
   }
 
+  // Sadece SU için günlük toplam ml (hedef için)
   int getCurrentIntake([DateTime? date]) {
     final targetDate = date ?? DateTime.now();
     final dateKey = _getDateKey(targetDate);
     final entries = _entriesByDate[dateKey] ?? [];
-    return entries.fold(0, (sum, entry) => sum + entry.amount);
+    // Sadece su için hesapla
+    return entries
+        .where((entry) => entry.drinkType.name.toLowerCase() == 'water')
+        .fold(0, (sum, entry) => sum + entry.amount);
   }
 
   List<WaterIntakeEntry> getEntriesForDate([DateTime? date]) {
@@ -100,38 +91,35 @@ class WaterModel extends ChangeNotifier {
     return List.from(_entriesByDate[dateKey] ?? []);
   }
 
+  // Sadece SU için progress (hedef 2000ml su içindir)
   double getProgress([DateTime? date]) {
     final intake = getCurrentIntake(date);
     return (intake / _dailyGoal).clamp(0.0, 1.0);
   }
 
-  Future<void> addWaterIntake(DrinkType drinkType, int amount) async {
-    // Map DrinkType to string for Firebase
-    String drinkTypeString;
-    switch (drinkType.name.toLowerCase()) {
-      case 'water':
-        drinkTypeString = 'water';
-        break;
-      case 'coffee':
-        drinkTypeString = 'coffee';
-        break;
-      case 'tea':
-        drinkTypeString = 'tea';
-        break;
-      case 'matcha':
-        drinkTypeString = 'matcha';
-        break;
-      default:
-        drinkTypeString = 'water';
+  // Su veya diğer içecek ekleme (su için ml, diğerleri için 1 bardak=200ml)
+  Future<void> addWaterIntake(DrinkType? drinkType, int amount) async {
+    final drinkTypeString = drinkType?.name.toLowerCase() ?? 'water';
+    
+    // Su mu kontrol et
+    final isWater = drinkTypeString == 'water';
+    
+    if (isWater) {
+      // Su ise: kullanıcının girdiği ml değerini kaydet
+      await _service.addWaterLog(
+        drinkType: drinkTypeString,
+        amountML: amount,
+      );
+      // Update weekly stats (sadece su için)
+      await _service.updateWeeklyStats();
+    } else {
+      // Diğer içecekler: drink_logs'a kaydet (varsayılan 200ml)
+      await _service.addDrinkLog(
+        drinkType: drinkTypeString,
+        amount: 200, // 1 bardak = 200ml
+        count: 1,
+      );
     }
-
-    await _service.addWaterLog(
-      drinkType: drinkTypeString,
-      amountML: amount,
-    );
-
-    // Update weekly stats
-    await _service.updateWeeklyStats();
     
     notifyListeners();
   }
@@ -177,8 +165,52 @@ class WaterModel extends ChangeNotifier {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  // İçeceğin su olup olmadığını kontrol et
+  bool isWaterDrink(DrinkType drinkType) {
+    return drinkType.name.toLowerCase() == 'water';
+  }
+
+  // Bugün eklenen diğer içecek sayısını getir
+  Future<int> getTodayDrinkCount([DateTime? date]) async {
+    final targetDate = date ?? DateTime.now();
+    return await _service.getDrinkCountForDate(targetDate);
+  }
+
   void clearAllData() {
     _entriesByDate.clear();
     notifyListeners();
+  }
+
+  // ==================== NEW ADVANCED FEATURES ====================
+
+  /// Add water intake with string drink type (for compatibility)
+  Future<void> addWaterIntakeByType(String drinkTypeId, int amount) async {
+    final drinkTypeString = drinkTypeId.toLowerCase();
+    
+    await _service.addWaterLog(
+      drinkType: drinkTypeString,
+      amountML: amount,
+    );
+
+    // Update weekly stats
+    await _service.updateWeeklyStats();
+    
+    notifyListeners();
+  }
+
+  /// Get today's drink breakdown
+  /// Returns map like: { "water": 850, "green tea": 300 }
+  Future<Map<String, int>> getTodayDrinkBreakdown() async {
+    return await _service.getDrinkDistribution(DateTime.now());
+  }
+
+  /// Get total for today with hydration factor applied
+  /// This accounts for different hydration effectiveness of drinks
+  Future<double> getEffectiveHydration(DateTime date) async {
+    final breakdown = await _service.getDrinkDistribution(date);
+    // This would require importing drink_type_info.dart
+    // For now, return regular total
+    final total = breakdown.values.fold(0, (sum, amount) => sum + amount);
+    return total.toDouble();
   }
 }

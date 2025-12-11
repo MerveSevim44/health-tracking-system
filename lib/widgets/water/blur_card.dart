@@ -92,6 +92,7 @@ class BluePrimaryButton extends StatelessWidget {
   final bool isLoading;
   final IconData? icon;
   final double? width;
+  final Color? color; // Dinamik renk desteği
 
   const BluePrimaryButton({
     super.key,
@@ -100,6 +101,7 @@ class BluePrimaryButton extends StatelessWidget {
     this.isLoading = false,
     this.icon,
     this.width,
+    this.color, // Varsayılan null, waterPrimary kullanılacak
   });
 
   @override
@@ -114,13 +116,13 @@ class BluePrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: WaterColors.waterPrimary,
+          backgroundColor: color ?? WaterColors.waterPrimary,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         ),
         child: isLoading
             ? const SizedBox(
@@ -139,10 +141,15 @@ class BluePrimaryButton extends StatelessWidget {
                     Icon(icon, size: 20),
                     const SizedBox(width: 8),
                   ],
-                  Text(
-                    text,
-                    style: WaterTextStyles.headlineMedium.copyWith(
-                      color: Colors.white,
+                  Flexible(
+                    child: Text(
+                      text,
+                      style: WaterTextStyles.headlineMedium.copyWith(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
                 ],

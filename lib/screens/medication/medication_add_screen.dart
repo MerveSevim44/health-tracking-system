@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/medication_model.dart';
+import 'package:health_care/models/medication_firebase_model.dart';
 import 'package:health_care/widgets/medication/pill_icon.dart';
 import 'package:health_care/widgets/medication/time_selector.dart';
 import 'package:health_care/theme/app_theme.dart';
@@ -19,7 +20,8 @@ class _MedicationAddScreenState extends State<MedicationAddScreen> {
   final _nameController = TextEditingController();
   final _dosageController = TextEditingController();
 
-  MedicationCategory _selectedCategory = MedicationCategory.morning;
+  // Multiple frequency selection (morning, afternoon, evening)
+  final Set<MedicationCategory> _selectedFrequencies = {MedicationCategory.morning};
   MedicationIcon _selectedIcon = MedicationIcon.pill;
   MealTiming _selectedMealTiming = MealTiming.anytime;
   TimeOfDay _selectedTime = const TimeOfDay(hour: 8, minute: 0);
@@ -286,40 +288,65 @@ class _MedicationAddScreenState extends State<MedicationAddScreen> {
   }
 
   Widget _buildCategorySelector() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: MedicationCategory.values.map((category) {
-        final isSelected = _selectedCategory == category;
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedCategory = category;
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: isSelected
-                  ? const LinearGradient(
-                      colors: [Color(0xFF9D84FF), Color(0xFFB8A4FF)],
-                    )
-                  : null,
-              color: isSelected ? null : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isSelected
-                    ? Colors.transparent
-                    : const Color(0xFFE8E8E8),
-                width: 1,
+    // Only show morning, afternoon, evening (exclude night)
+    final categories = [
+      MedicationCategory.morning,
+      MedicationCategory.afternoon,
+      MedicationCategory.evening,
+    ];
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: categories.map((category) {
+        final isSelected = _selectedFrequencies.contains(category);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                if (isSelected) {
+                  _selectedFrequencies.remove(category);
+                } else {
+                  _selectedFrequencies.add(category);
+                }
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: isSelected
+                    ? const LinearGradient(
+                        colors: [Color(0xFF9D84FF), Color(0xFFB8A4FF)],
+                      )
+                    : null,
+                color: isSelected ? null : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSelected
+                      ? Colors.transparent
+                      : const Color(0xFFE8E8E8),
+                  width: 1,
+                ),
               ),
-            ),
-            child: Text(
-              _getCategoryText(category),
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : AppColors.textDark,
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle : Icons.circle_outlined,
+                    color: isSelected ? Colors.white : const Color(0xFF9D84FF),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _getCategoryText(category),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : AppColors.textDark,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -485,17 +512,43 @@ class _MedicationAddScreenState extends State<MedicationAddScreen> {
 
   void _handleAddMedication(BuildContext context) {
     if (_formKey.currentState!.validate()) {
+      // Validate at least one frequency is selected
+      if (_selectedFrequencies.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Please select at least one time (Morning, Afternoon, or Evening)'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+        return;
+      }
+      
+      // Use the first selected frequency for UI compatibility
+      final primaryCategory = _selectedFrequencies.first;
+      
+      // Create frequency object from selected frequencies
+      final frequency = MedicationFrequency(
+        morning: _selectedFrequencies.contains(MedicationCategory.morning),
+        afternoon: _selectedFrequencies.contains(MedicationCategory.afternoon),
+        evening: _selectedFrequencies.contains(MedicationCategory.evening),
+      );
+      
       final medication = Medication(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text,
         dosage: _dosageController.text,
-        category: _selectedCategory,
+        category: primaryCategory,
         time: _selectedTime,
         icon: _selectedIcon,
         mealTiming: _selectedMealTiming,
         color: _selectedColor,
         pillsLeft: 30,
         totalPills: 30,
+        frequencyOverride: frequency,
       );
 
       context.read<MedicationModel>().addMedication(medication);

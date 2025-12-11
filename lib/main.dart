@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'models/mood_model.dart';
 import 'models/water_model.dart';
 import 'models/medication_model.dart';
+import 'providers/drink_provider.dart';
 
 // ------------------------------------
 // TEMA VE DİĞER WIDGET IMPORTS
@@ -30,7 +31,7 @@ import 'package:health_care/screens/water/water_stats_screen.dart';
 import 'package:health_care/screens/water/water_success_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
 import 'package:health_care/screens/medication/medication_detail_screen.dart';
-import 'package:health_care/screens/medication/medication_add_screen.dart';
+import 'package:health_care/screens/medication/medication_add_enhanced_screen.dart';
 
 
 void main() async {
@@ -47,6 +48,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MoodModel()),
         ChangeNotifierProvider(create: (_) => WaterModel()),
         ChangeNotifierProvider(create: (_) => MedicationModel()),
+        ChangeNotifierProvider(
+          create: (_) => DrinkProvider()..initialize(),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -108,7 +112,7 @@ class MyApp extends StatelessWidget {
         // İlaç Takibi Rotaları
         '/medication': (context) => const MedicationHomeScreen(),
         '/medication/detail': (context) => const MedicationDetailScreen(),
-        '/medication/add': (context) => const MedicationAddScreen(),
+        '/medication/add': (context) => const MedicationAddEnhancedScreen(),
       },
     );
   }

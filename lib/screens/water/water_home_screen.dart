@@ -2,12 +2,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/water_model.dart';
+import 'package:health_care/models/drink_type_info.dart';
+import 'package:health_care/models/custom_drink_model.dart';
+import 'package:health_care/providers/drink_provider.dart';
 import 'package:health_care/theme/water_theme.dart';
-import 'package:health_care/widgets/water/water_blob.dart';
+import 'package:health_care/widgets/water/dynamic_drink_blob.dart';
 import 'package:health_care/widgets/water/drink_selector.dart';
+import 'package:health_care/widgets/water/selected_drink_display.dart';
 import 'package:health_care/widgets/water/water_counter.dart';
 import 'package:health_care/widgets/water/blur_card.dart';
+import 'package:health_care/widgets/water/add_custom_drink_modal.dart';
+import 'package:health_care/widgets/water/today_drink_logs.dart';
 import 'package:health_care/screens/water/water_success_screen.dart';
+import 'package:health_care/screens/water/drink_info_page.dart';
 import 'package:intl/intl.dart';
 
 class WaterHomeScreen extends StatefulWidget {
@@ -22,6 +29,16 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
   int _counterAmount = 0;
   DateTime _selectedDate = DateTime.now();
 
+  @override
+  void initState() {
+    super.initState();
+    // DrinkProvider'a başlangıç tarihini set et
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DrinkProvider>(context, listen: false)
+          .setSelectedDate(_selectedDate);
+    });
+  }
+
   // Week days for calendar
   List<DateTime> _getWeekDays() {
     final now = _selectedDate;
@@ -31,22 +48,76 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
   }
 
   void _addWater() async {
-    if (_counterAmount > 0) {
-      final waterModel = Provider.of<WaterModel>(context, listen: false);
-      final drinkType = DrinkTypes.defaults[_selectedDrinkIndex];
-      
-      await waterModel.addWaterIntake(drinkType, _counterAmount);
-      
-      setState(() {
-        _counterAmount = 0;
-      });
+    final waterModel = Provider.of<WaterModel>(context, listen: false);
+    final drinkProvider = Provider.of<DrinkProvider>(context, listen: false);
+    final drinkType = DrinkTypes.defaults[_selectedDrinkIndex];
+    final isWater = waterModel.isWaterDrink(drinkType);
+    
+    if (isWater) {
+      // Su için: kullanıcının girdiği ml değeri
+      if (_counterAmount > 0) {
+        await waterModel.addWaterIntake(drinkType, _counterAmount);
+        
+        // Su için de log kaydet
+        await drinkProvider.addDrinkLog(DrinkLog(
+          id: '',
+          drinkId: 'water',
+          drinkName: drinkType.name,
+          amount: _counterAmount,
+          cups: 0,
+          timestamp: DateTime.now(),
+          iconUrl: '💧',
+          color: drinkType.color,
+        ));
+        
+        setState(() {
+          _counterAmount = 0;
+        });
 
-      // Check if goal achieved
-      final achieved = await waterModel.isGoalAchieved(_selectedDate);
-      if (achieved) {
-        _showGoalAchievedScreen();
+        // Check if goal achieved (sadece su için)
+        final achieved = await waterModel.isGoalAchieved(_selectedDate);
+        if (achieved) {
+          _showGoalAchievedScreen();
+        }
+      }
+    } else {
+      // Diğer içecekler için: 1 bardak = 200ml varsayılan
+      await waterModel.addWaterIntake(drinkType, 200);
+      
+      // Drink log kaydet
+      await drinkProvider.addDrinkLog(DrinkLog(
+        id: '',
+        drinkId: drinkType.name.toLowerCase(),
+        drinkName: drinkType.name,
+        amount: 200,
+        cups: 1,
+        timestamp: DateTime.now(),
+        iconUrl: _getDrinkIcon(drinkType),
+        color: drinkType.color,
+      ));
+      
+      // Basit bildirim göster
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('1 cup of ${drinkType.name} added!'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: drinkType.color,
+          ),
+        );
       }
     }
+  }
+
+  // İçecek için ikon seç (emoji veya MaterialIcon'dan)
+  String _getDrinkIcon(DrinkType drinkType) {
+    final name = drinkType.name.toLowerCase();
+    if (name.contains('tea')) return '🍵';
+    if (name.contains('coffee')) return '☕';
+    if (name.contains('juice')) return '🧃';
+    if (name.contains('milk')) return '🥛';
+    if (name.contains('water')) return '💧';
+    return '🥤'; // Default
   }
 
   void _showGoalAchievedScreen() {
@@ -57,6 +128,32 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
         builder: (context) => WaterSuccessScreen(
           achievedAmount: waterModel.getCurrentIntake(_selectedDate),
           goalAmount: waterModel.dailyGoal,
+        ),
+      ),
+    );
+  }
+
+  // Seçili içeceğin su olup olmadığını kontrol et
+  bool _isWaterSelected() {
+    final drinkType = DrinkTypes.defaults[_selectedDrinkIndex];
+    return drinkType.name.toLowerCase() == 'water';
+  }
+
+  // İçecek bilgi ekranını aç
+  void _showDrinkInfo(int drinkIndex) {
+    final drinkType = DrinkTypes.defaults[drinkIndex];
+    
+    // DrinkTypeInfo'yu bul
+    final drinkInfo = DrinkDatabase.allDrinks.firstWhere(
+      (info) => info.name.toLowerCase() == drinkType.name.toLowerCase(),
+      orElse: () => DrinkDatabase.allDrinks[0], // Default to water
+    );
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DrinkInfoPage(
+          drinkInfo: drinkInfo,
         ),
       ),
     );
@@ -87,26 +184,56 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
 
                     // Week day selector
                     _buildWeekCalendar(waterModel),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
-                    // Water blob with progress
+                    // Seçili içecek adı gösterimi
+                    Center(
+                      child: SelectedDrinkDisplay(
+                        drinkType: DrinkTypes.defaults[_selectedDrinkIndex],
+                        onTap: () => _showDrinkInfo(_selectedDrinkIndex),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Dinamik içecek blob with progress
                     Center(
                       child: Column(
                         children: [
-                          WaterBlob(
+                          DynamicDrinkBlob(
                             progress: progress,
+                            drinkType: DrinkTypes.defaults[_selectedDrinkIndex],
                             size: 220,
                           ),
                           const SizedBox(height: 16),
-                          Text(
-                            '$currentIntake ml / $dailyGoal ml',
-                            style: WaterTextStyles.headlineMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Keep it going! Today you drank',
-                            style: WaterTextStyles.bodyMedium,
-                          ),
+                          // Sadece SU için ml/hedef göster
+                          if (_isWaterSelected()) ...[
+                            Text(
+                              '$currentIntake ml / $dailyGoal ml',
+                              style: WaterTextStyles.headlineMedium,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Daily water goal progress',
+                              style: WaterTextStyles.bodyMedium,
+                            ),
+                          ] else ...[
+                            // Diğer içecekler için farklı mesaj
+                            FutureBuilder<int>(
+                              future: waterModel.getTodayDrinkCount(_selectedDate),
+                              builder: (context, snapshot) {
+                                final count = snapshot.data ?? 0;
+                                return Text(
+                                  '$count cup${count != 1 ? 's' : ''} today',
+                                  style: WaterTextStyles.headlineMedium,
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap Add to log 1 cup',
+                              style: WaterTextStyles.bodyMedium,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -121,7 +248,28 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
                           style: WaterTextStyles.headlineMedium,
                         ),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AddCustomDrinkModal(
+                                onDrinkAdded: (drink) async {
+                                  final drinkProvider = Provider.of<DrinkProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  await drinkProvider.addCustomDrink(drink);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('${drink.name} added!'),
+                                        backgroundColor: drink.color,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            );
+                          },
                           child: Text(
                             'Add new',
                             style: WaterTextStyles.labelLarge.copyWith(
@@ -142,33 +290,83 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
                           _selectedDrinkIndex = index;
                         });
                       },
+                      onDrinkLongPressed: (index) {
+                        _showDrinkInfo(index);
+                      },
                     ),
                     const SizedBox(height: 32),
 
-                    // Amount counter
-                    WaterCounter(
-                      currentAmount: _counterAmount,
-                      step: 50,
-                      onAmountChanged: (amount) {
-                        setState(() {
-                          _counterAmount = amount;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 24),
+                    // Sadece SU için ml slider göster
+                    if (_isWaterSelected()) ...[
+                      // Amount counter (sadece su için)
+                      WaterCounter(
+                        currentAmount: _counterAmount,
+                        step: 50,
+                        onAmountChanged: (amount) {
+                          setState(() {
+                            _counterAmount = amount;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
 
-                    // Add button
-                    if (_counterAmount > 0)
+                      // Add button (su için ml ile)
+                      if (_counterAmount > 0)
+                        BluePrimaryButton(
+                          text: 'Add $_counterAmount ml',
+                          onPressed: _addWater,
+                          width: double.infinity,
+                          icon: Icons.add,
+                          color: DrinkTypes.defaults[_selectedDrinkIndex].color,
+                        ),
+                    ] else ...[
+                      // Diğer içecekler için tek buton (1 bardak = 200ml)
                       BluePrimaryButton(
-                        text: 'Add $_counterAmount ml',
+                        text: 'Add 1 cup of ${DrinkTypes.defaults[_selectedDrinkIndex].name}',
                         onPressed: _addWater,
                         width: double.infinity,
                         icon: Icons.add,
+                        color: DrinkTypes.defaults[_selectedDrinkIndex].color,
                       ),
+                    ],
                     const SizedBox(height: 32),
 
                     // Benefits card
                     _buildBenefitsCard(),
+                    
+                    const SizedBox(height: 32),
+
+                    // Today's Drink Logs
+                    Consumer<DrinkProvider>(
+                      builder: (context, drinkProvider, child) {
+                        // Seçili tarih bugün mü kontrol et
+                        final now = DateTime.now();
+                        final today = DateTime(now.year, now.month, now.day);
+                        final selected = DateTime(
+                          _selectedDate.year,
+                          _selectedDate.month,
+                          _selectedDate.day,
+                        );
+                        final isToday = selected == today;
+                        
+                        return TodayDrinkLogs(
+                          logs: isToday ? drinkProvider.todayLogs : drinkProvider.selectedDateLogs,
+                          selectedDate: _selectedDate,
+                          onDeleteLog: (logId) async {
+                            await drinkProvider.deleteDrinkLog(logId);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Log deleted'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -238,6 +436,9 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
               setState(() {
                 _selectedDate = day;
               });
+              // DrinkProvider'daki tarihi de güncelle
+              Provider.of<DrinkProvider>(context, listen: false)
+                  .setSelectedDate(day);
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),

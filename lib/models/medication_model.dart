@@ -43,6 +43,7 @@ class Medication {
   final int totalPills;
   final List<int> scheduledDays; // 0-6 for Sun-Sat
   final bool isActive;
+  final MedicationFrequency? frequencyOverride; // Override for multiple time selection
 
   Medication({
     required this.id,
@@ -57,6 +58,7 @@ class Medication {
     this.totalPills = 30,
     this.scheduledDays = const [0, 1, 2, 3, 4, 5, 6],
     this.isActive = true,
+    this.frequencyOverride,
   });
 
   Medication copyWith({
@@ -71,6 +73,7 @@ class Medication {
     int? totalPills,
     List<int>? scheduledDays,
     bool? isActive,
+    MedicationFrequency? frequencyOverride,
   }) {
     return Medication(
       id: id,
@@ -85,6 +88,7 @@ class Medication {
       totalPills: totalPills ?? this.totalPills,
       scheduledDays: scheduledDays ?? this.scheduledDays,
       isActive: isActive ?? this.isActive,
+      frequencyOverride: frequencyOverride ?? this.frequencyOverride,
     );
   }
 
@@ -129,7 +133,7 @@ class Medication {
       instructions: '',
       startDate: DateTime.now().toIso8601String(),
       active: isActive,
-      frequency: MedicationFrequency(
+      frequency: frequencyOverride ?? MedicationFrequency(
         morning: category == MedicationCategory.morning,
         afternoon: category == MedicationCategory.afternoon,
         evening: category == MedicationCategory.evening,
@@ -161,14 +165,21 @@ enum MedicationStatus {
 class MedicationModel extends ChangeNotifier {
   final MedicationService _service = MedicationService();
   List<Medication> _medications = [];
+  List<MedicationFirebase> _medicationsFirebase = [];
   final List<MedicationLog> _logs = [];
+  DateTime _selectedDate = DateTime.now();
+  Map<String, List<MedicationIntake>> _selectedDateIntakes = {};
 
   List<Medication> get medications => _medications;
+  List<MedicationFirebase> get medicationsFirebase => _medicationsFirebase;
   List<MedicationLog> get logs => _logs;
+  DateTime get selectedDate => _selectedDate;
+  Map<String, List<MedicationIntake>> get selectedDateIntakes => _selectedDateIntakes;
 
   // Listen to Firebase changes (call after user login)
   void initialize() {
     _service.getActiveMedications().listen((fbMeds) {
+      _medicationsFirebase = fbMeds;
       _medications = fbMeds.map((fb) => Medication.fromFirebase(fb)).toList();
       notifyListeners();
     }, onError: (error) {
@@ -185,8 +196,16 @@ class MedicationModel extends ChangeNotifier {
   }
 
   List<Medication> getMedicationsForDay(DateTime day) {
-    // Since we don't have scheduledDays in Firebase, return all active medications
-    return _medications.where((med) => med.isActive).toList()
+    // Seçili tarihteki alınan ilaçları filtrele
+    final takenMedIds = _selectedDateIntakes.entries
+        .where((entry) => entry.value.any((intake) => intake.taken))
+        .map((entry) => entry.key)
+        .toSet();
+    
+    // Aktif ve henüz alınmamış ilaçları döndür
+    return _medications
+        .where((med) => med.isActive && !takenMedIds.contains(med.id))
+        .toList()
       ..sort((a, b) => _compareTimeOfDay(a.time, b.time));
   }
 
@@ -210,7 +229,7 @@ class MedicationModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> logMedicationAction(String medicationId, MedicationStatus status, {String? notes}) async {
+  Future<void> logMedicationAction(String medicationId, MedicationStatus status, {String? notes, DateTime? date}) async {
     String takenStatus;
     switch (status) {
       case MedicationStatus.taken:
@@ -228,6 +247,7 @@ class MedicationModel extends ChangeNotifier {
       medicationId: medicationId,
       takenStatus: takenStatus,
       notes: notes ?? '',
+      date: date,
     );
 
     notifyListeners();
@@ -239,5 +259,74 @@ class MedicationModel extends ChangeNotifier {
 
   Future<int> getTodayTotalCount() async {
     return await _service.getTodayScheduledCount();
+  }
+
+  // Seçili tarihi değiştir ve o tarihin intake'lerini yükle
+  Future<void> setSelectedDate(DateTime date) async {
+    _selectedDate = DateTime(date.year, date.month, date.day);
+    await _loadIntakesForSelectedDate();
+    notifyListeners();
+  }
+
+  // Seçili tarihin intake'lerini yükle
+  Future<void> _loadIntakesForSelectedDate() async {
+    try {
+      _selectedDateIntakes = await _service.getIntakesForDate(_selectedDate);
+    } catch (e) {
+      debugPrint('Error loading intakes for date: $e');
+      _selectedDateIntakes = {};
+    }
+  }
+
+  // İlacı al ve intake'e kaydet, ardından listeden kaldırmak için refresh
+  Future<void> takeMedication(String medicationId, DateTime date, {String? notes}) async {
+    await logMedicationAction(medicationId, MedicationStatus.taken, notes: notes, date: date);
+    // O tarihin intake'lerini yeniden yükle
+    await setSelectedDate(date);
+  }
+
+  // Enhanced medication methods
+  
+  /// Add medication with full Firebase support (type, totalAmount, etc.)
+  Future<String> addMedicationEnhanced(MedicationFirebase medication) async {
+    final id = await _service.addMedication(medication);
+    notifyListeners();
+    return id;
+  }
+
+  /// Generate intakes for a medication
+  Future<void> generateIntakes(String medicationId, List<MedicationIntake> intakes) async {
+    await _service.generateIntakes(medicationId: medicationId, intakes: intakes);
+    notifyListeners();
+  }
+
+  /// Get intakes for a specific medication on a specific date
+  Future<List<MedicationIntake>> getIntakesForMedicationOnDate({
+    required String medicationId,
+    required DateTime date,
+  }) async {
+    return await _service.getIntakesForMedicationOnDate(
+      medicationId: medicationId,
+      date: date,
+    );
+  }
+
+  /// Update intake status
+  Future<void> updateIntakeStatus({
+    required String medicationId,
+    required String intakeId,
+    required bool taken,
+    String notes = '',
+  }) async {
+    await _service.updateIntakeStatus(
+      medicationId: medicationId,
+      intakeId: intakeId,
+      taken: taken,
+      notes: notes,
+    );
+    
+    // Reload intakes for current date
+    await _loadIntakesForSelectedDate();
+    notifyListeners();
   }
 }

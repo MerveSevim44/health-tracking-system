@@ -142,10 +142,11 @@ class DailyMoodHomeScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.pastelMint,
             shape: BoxShape.circle,
-            image: const DecorationImage(
-              image: NetworkImage('https://via.placeholder.com/48'),
-              fit: BoxFit.cover,
-            ),
+          ),
+          child: const Icon(
+            Icons.person,
+            color: Colors.white,
+            size: 28,
           ),
         ),
         Row(

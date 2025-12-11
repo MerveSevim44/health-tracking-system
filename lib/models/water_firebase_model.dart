@@ -28,10 +28,21 @@ class WaterLogFirebase {
   }
 
   factory WaterLogFirebase.fromJson(String id, Map<String, dynamic> json) {
+    // Safe parsing with backward compatibility
+    // Handle both 'amountML' and 'amountMl' (case mismatch)
+    int amount = 0;
+    if (json.containsKey('amountML')) {
+      amount = json['amountML'] as int? ?? 0;
+    } else if (json.containsKey('amountMl')) {
+      amount = json['amountMl'] as int? ?? 0;
+    } else if (json.containsKey('amount')) {
+      amount = json['amount'] as int? ?? 0;
+    }
+    
     return WaterLogFirebase(
       id: id,
       drinkType: json['drinkType'] as String? ?? 'water',
-      amountML: json['amountML'] as int? ?? 0,
+      amountML: amount,
       createdAt: json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
       date: json['date'] as String? ?? _getDateKey(DateTime.now()),
     );

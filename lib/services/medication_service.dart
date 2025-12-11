@@ -80,15 +80,19 @@ class MedicationService {
   /// Log a medication intake
   Future<String> logIntake({
     required String medicationId,
-    required String takenStatus, // "take" | "skip" | "postpone"
+    required String takenStatus, // "take" | "skip" | "postpone" - legacy support
     String notes = '',
+    DateTime? date,
   }) async {
+    // Convert legacy takenStatus to boolean
+    final taken = takenStatus.toLowerCase() == 'take';
+    
     final intake = MedicationIntake(
       id: '',
       medicationId: medicationId,
-      date: DateTime.now().toIso8601String(),
+      date: (date ?? DateTime.now()).toIso8601String(),
       notes: notes,
-      takenStatus: takenStatus,
+      taken: taken,
     );
 
     final ref = _intakesRef(medicationId).push();
@@ -114,10 +118,15 @@ class MedicationService {
 
   /// Get intakes for today across all medications
   Future<Map<String, List<MedicationIntake>>> getTodayIntakes() async {
+    final today = DateTime.now();
+    return getIntakesForDate(today);
+  }
+
+  /// Get intakes for a specific date across all medications
+  Future<Map<String, List<MedicationIntake>>> getIntakesForDate(DateTime date) async {
     if (_userId == null) throw Exception('User not authenticated');
     
-    final today = DateTime.now();
-    final todayKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     
     final snapshot = await _database.ref('medication_intakes/$_userId').get();
     final data = snapshot.value as Map<dynamic, dynamic>?;
@@ -130,17 +139,17 @@ class MedicationService {
       final medId = medEntry.key as String;
       final intakes = medEntry.value as Map<dynamic, dynamic>;
       
-      final todayIntakes = intakes.entries
+      final dateIntakes = intakes.entries
           .map((e) => MedicationIntake.fromJson(
                 e.key as String,
                 medId,
                 Map<String, dynamic>.from(e.value as Map),
               ))
-          .where((intake) => intake.date.startsWith(todayKey))
+          .where((intake) => intake.date.startsWith(dateKey))
           .toList();
 
-      if (todayIntakes.isNotEmpty) {
-        result[medId] = todayIntakes;
+      if (dateIntakes.isNotEmpty) {
+        result[medId] = dateIntakes;
       }
     }
 
@@ -172,7 +181,7 @@ class MedicationService {
     int count = 0;
     
     for (var list in intakes.values) {
-      count += list.where((intake) => intake.takenStatus == 'take').length;
+      count += list.where((intake) => intake.taken).length;
     }
     
     return count;
@@ -188,5 +197,66 @@ class MedicationService {
     return data.values
         .where((med) => (med as Map)['active'] == true)
         .length;
+  }
+
+  // ==================== BULK INTAKE GENERATION ====================
+
+  /// Generate and save multiple intakes at once
+  /// Used when creating a new medication with automatic scheduling
+  Future<void> generateIntakes({
+    required String medicationId,
+    required List<MedicationIntake> intakes,
+  }) async {
+    final ref = _intakesRef(medicationId);
+    
+    for (final intake in intakes) {
+      // Use custom ID format: int_YYYYMMDD_period
+      await ref.child(intake.id).set(intake.toJson());
+    }
+  }
+
+  /// Update intake status (mark as taken/not taken)
+  Future<void> updateIntakeStatus({
+    required String medicationId,
+    required String intakeId,
+    required bool taken,
+    String notes = '',
+  }) async {
+    await _intakesRef(medicationId).child(intakeId).update({
+      'taken': taken,
+      'notes': notes,
+    });
+  }
+
+  /// Get intakes for a specific medication on a specific date
+  Future<List<MedicationIntake>> getIntakesForMedicationOnDate({
+    required String medicationId,
+    required DateTime date,
+  }) async {
+    final dateStr = date.toIso8601String().split('T')[0];
+    final snapshot = await _intakesRef(medicationId).get();
+    final data = snapshot.value as Map<dynamic, dynamic>?;
+    
+    if (data == null) return [];
+
+    return data.entries
+        .map((e) => MedicationIntake.fromJson(
+              e.key as String,
+              medicationId,
+              Map<String, dynamic>.from(e.value as Map),
+            ))
+        .where((intake) => intake.date.startsWith(dateStr))
+        .toList();
+  }
+
+  /// Check if intakes exist for a medication
+  Future<bool> hasIntakes(String medicationId) async {
+    final snapshot = await _intakesRef(medicationId).get();
+    return snapshot.exists && snapshot.value != null;
+  }
+
+  /// Delete all intakes for a medication
+  Future<void> deleteAllIntakes(String medicationId) async {
+    await _intakesRef(medicationId).remove();
   }
 }
