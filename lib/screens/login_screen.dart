@@ -2,9 +2,6 @@
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-
-// 🔥 GÜNCELLENDİ: Ana sayfa artık PastelHomeNavigation olarak kabul ediliyor
-import '../screens/pastel_home_navigation.dart'; // PastelHomeNavigation importu
 import '../theme/curved_app_bar.dart';
 import 'register_screen.dart';
 
@@ -170,8 +167,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       backgroundColor: lightBackground,
       body: SingleChildScrollView(

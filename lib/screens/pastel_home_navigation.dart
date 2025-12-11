@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:health_care/theme/app_theme.dart';
 import 'package:health_care/screens/daily_mood_home_screen.dart';
 import 'package:health_care/screens/weekly_dashboard_screen.dart';
-import 'package:health_care/screens/insights_screen.dart';
 import 'package:health_care/screens/mood_selection_screen.dart';
 import 'package:health_care/screens/water/water_home_screen.dart';
-import 'package:health_care/screens/breathing_exercise_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/water_model.dart';
 import 'package:health_care/models/medication_model.dart';
-import 'package:health_care/models/mood_model.dart';
 
 // GEREKLİ: AuthService importu
 import '../services/auth_service.dart';

@@ -190,21 +190,6 @@ class MedicationIntakeCalculator {
         type == MedicationType.eyeDrops ||
         type == MedicationType.earDrops;
   }
-
-  static List<int> _distributeWeekdays(int timesPerWeek) {
-    if (timesPerWeek == 1) return [1]; // Monday
-    if (timesPerWeek == 2) return [1, 4]; // Monday, Thursday
-    if (timesPerWeek == 3) return [1, 3, 5]; // Monday, Wednesday, Friday
-    if (timesPerWeek == 4) return [1, 2, 4, 5]; // Mon, Tue, Thu, Fri
-    if (timesPerWeek == 5) return [1, 2, 3, 4, 5]; // Mon-Fri
-    if (timesPerWeek == 6) return [1, 2, 3, 4, 5, 6]; // Mon-Sat
-    return [1, 2, 3, 4, 5, 6, 7]; // Every day
-  }
-
-  static DateTime _findNextWeekday(DateTime from, int weekday) {
-    final daysToAdd = (weekday - from.weekday + 7) % 7;
-    return from.add(Duration(days: daysToAdd));
-  }
 }
 
 /// Intake schedule structure

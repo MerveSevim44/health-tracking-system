@@ -137,40 +137,6 @@ class DailyMoodHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppColors.pastelMint,
-            shape: BoxShape.circle,
-            image: const DecorationImage(
-              image: NetworkImage('https://via.placeholder.com/48'),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        Row(
-          children: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.person_add_outlined),
-              color: AppColors.textDark,
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.add_circle_outline),
-              color: AppColors.textDark,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Widget _buildQuickActions() {
     return Row(
       children: [

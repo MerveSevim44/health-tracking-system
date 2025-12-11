@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:health_care/services/mood_service.dart';
-import 'package:health_care/models/mood_firebase_model.dart';
 
 class MoodModel extends ChangeNotifier {
   final MoodService _service = MoodService();
