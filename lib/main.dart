@@ -11,7 +11,6 @@ import 'package:provider/provider.dart';
 import 'models/mood_model.dart';
 import 'models/water_model.dart';
 import 'models/medication_model.dart';
-import 'providers/drink_provider.dart';
 
 // ------------------------------------
 // TEMA VE DİĞER WIDGET IMPORTS
@@ -31,7 +30,7 @@ import 'package:health_care/screens/water/water_stats_screen.dart';
 import 'package:health_care/screens/water/water_success_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
 import 'package:health_care/screens/medication/medication_detail_screen.dart';
-import 'package:health_care/screens/medication/medication_add_enhanced_screen.dart';
+import 'package:health_care/screens/medication/medication_add_screen.dart';
 
 
 void main() async {
@@ -48,9 +47,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MoodModel()),
         ChangeNotifierProvider(create: (_) => WaterModel()),
         ChangeNotifierProvider(create: (_) => MedicationModel()),
-        ChangeNotifierProvider(
-          create: (_) => DrinkProvider()..initialize(),
-        ),
       ],
       child: const MyApp(),
     ),
@@ -60,6 +56,85 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // Animasyonlu sayfa geçişini oluşturan ana fonksiyon (onGenerateRoute)
+  Route<dynamic> _onGenerateRoute(RouteSettings settings) {
+
+    // Rota adına göre hedef sayfayı belirle
+    final Widget page;
+    switch (settings.name) {
+    // AUTH ROTALARI
+      case '/':
+      case '/first':
+        page = const FirstScreen();
+        break;
+      case '/login':
+        page = const LoginScreen();
+        break;
+      case '/register':
+        page = const RegisterScreen();
+        break;
+
+    // ANA ROTA VE ÖZELLİK ROTALARI
+      case '/home':
+        page = const PastelHomeNavigation();
+        break;
+      case '/breathing':
+        page = const BreathingExerciseScreen();
+        break;
+
+    // Su Takibi Rotaları
+      case '/water/home':
+        page = const WaterHomeScreen();
+        break;
+      case '/water/stats':
+        page = const WaterStatsScreen();
+        break;
+      case '/water/success':
+      // Rotadan argüman almayı gerektiriyorsa (örn: WaterSuccessScreen), argümanı burada kullanmalısınız.
+      // Basitleştirilmiş haliyle:
+        page = const WaterSuccessScreen(
+          achievedAmount: 2000,
+          goalAmount: 2000,
+        );
+        break;
+
+    // İlaç Takibi Rotaları
+      case '/medication':
+        page = const MedicationHomeScreen();
+        break;
+      case '/medication/detail':
+        page = const MedicationDetailScreen();
+        break;
+      case '/medication/add':
+        page = const MedicationAddScreen();
+        break;
+
+      default:
+      // Tanımlanmamış rotalar için hata ekranı veya ana sayfa
+        return MaterialPageRoute(builder: (_) => const FirstScreen());
+    }
+
+    // Özel Animasyonlu Geçişi (Soldan Kayma) uygula
+    return PageRouteBuilder(
+      settings: settings, // Rota ayarlarını korur
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        // Soldan sağa kayarak geçiş animasyonu ayarları
+        const begin = Offset(1.0, 0.0); // Sağdan başla
+        const end = Offset.zero;       // Sola kay
+        const curve = Curves.ease;     // Yumuşak geçiş eğrisi
+
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      },
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -67,7 +142,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: pastelAppTheme,
 
-      // 🔥 HOME YERİNE STREAMBUILDER KULLANILARAK OTURUM KONTROLÜ
+      // HOME YERİNE STREAMBUILDER KULLANILARAK OTURUM KONTROLÜ
       home: StreamBuilder<User?>(
         // Firebase Auth'taki oturum değişikliklerini dinler
         stream: FirebaseAuth.instance.authStateChanges(),
@@ -79,41 +154,18 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          // 2. Durum: Kullanıcı giriş yapmış (snapshot.data bir kullanıcı içeriyorsa)
+          // 2. Durum: Kullanıcı giriş yapmış
           if (snapshot.hasData && snapshot.data != null) {
-            // Ana sayfaya (PastelHomeNavigation) yönlendir
             return const PastelHomeNavigation();
           }
 
           // 3. Durum: Kullanıcı giriş yapmamışsa
-          // FirstScreen (Giriş/Kayıt) ekranını göster
           return const FirstScreen();
         },
       ),
 
-      // Rotalar tanımlaması (Burada tanımlı kalmalıdır, yönlendirme butonu için kullanılır)
-      routes: {
-        // AUTH ROTALARI
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-
-        // ANA ROTA VE ÖZELLİK ROTALARI
-        '/home': (context) => const PastelHomeNavigation(),
-        '/breathing': (context) => const BreathingExerciseScreen(),
-
-        // Su Takibi Rotaları
-        '/water/home': (context) => const WaterHomeScreen(),
-        '/water/stats': (context) => const WaterStatsScreen(),
-        '/water/success': (context) => const WaterSuccessScreen(
-          achievedAmount: 2000,
-          goalAmount: 2000,
-        ),
-
-        // İlaç Takibi Rotaları
-        '/medication': (context) => const MedicationHomeScreen(),
-        '/medication/detail': (context) => const MedicationDetailScreen(),
-        '/medication/add': (context) => const MedicationAddEnhancedScreen(),
-      },
+      // 🔥🔥🔥 Rotalar kaldırıldı ve yerine özel animasyon sağlayan onGenerateRoute eklendi.
+      onGenerateRoute: _onGenerateRoute,
     );
   }
 }
