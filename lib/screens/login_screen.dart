@@ -1,20 +1,17 @@
-// 📁 lib/screens/login_screen.dart
+// 📁 lib/screens/login_screen.dart (MINOA Teması ve Animasyon Uyumu)
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../theme/curved_app_bar.dart';
-import 'register_screen.dart';
 
-// Health Care Teması Renkleri (Yeşil - Sağlık Temalı)
-const Color primaryGreen = Color(0xFF009000); // Ana yeşil
-const Color secondaryGreen = Color(0xFF4CAF50); // Açık yeşil
-const Color accentGreen = Color(0xFF00C853); // Vurgulu yeşil
+
+// 🎨 MINOA ANA UYGULAMA RENK PALETİ
+const Color primaryOrange = Color(0xFFE49B6E); // Ana Turuncu (Soft Orange)
+const Color backgroundBeige = Color(0xFFFFF6EC); // Arka Plan Rengi
+const Color darkTextColor = Color(0xFF5B4A3A); // Koyu Metin Rengi (Dark Text/Brown)
+const Color lightSecondaryTextColor = Color(0xFF7B746E); // Açık İkincil Metin Rengi
 const Color white = Colors.white;
-const Color darkText = Color(0xFF2C3E50); // Koyu metin
-const Color lightBackground = Color(
-  0xFFF0F9F0,
-); // Açık yeşilimsi beyaz arka plan
-const Color healthCardBg = Color(0xFFE8F5E9); // Sağlık kartları için açık yeşil
+const Color headerBackgroundColor = Color(0xFFFAE9D7); // Başlık Arka Plan Rengi
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,6 +27,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
+  // Sayfa göstergesi için durum değişkenleri (Login, akışın 3. sayfası)
+  final int _currentPage = 2; // Index 2
+  final int _totalPages = 3;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -37,80 +38,65 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // 🌟 GİRİŞ İŞLEMİ FONKSİYONU (Aynı Kaldı)
+  // 🌟 GİRİŞ İŞLEMİ FONKSİYONU (Navigasyon korundu)
   Future<void> _signInUser() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() { _isLoading = true; });
 
     try {
-      // 1. ADIM: AuthService ile giriş yap
       await _authService.signInUser(
         email: _emailController.text,
         password: _passwordController.text,
       );
 
-      // 2. ADIM: Başarılı yönlendirme (Uygulama geçmişini temizleyerek)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Giriş başarılı! Ana sayfaya yönlendiriliyorsunuz.'),
-            backgroundColor: primaryGreen,
+            backgroundColor: primaryOrange, // Renk güncellendi
           ),
         );
-
-        // 🔥 YÖNLENDİRME: PastelHomeNavigation (main.dart'taki '/home' rotasına)
+        // 🔥 YÖNLENDİRME KORUNDU: Uygulama geçmişini temizleyerek '/home' rotasına gider.
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/home',
-          (Route<dynamic> route) => false,
+              (Route<dynamic> route) => false,
         );
       }
     } catch (e) {
-      // 3. ADIM: Hata mesajını göster
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() { _isLoading = false; });
     }
   }
 
-  // 🔥 YENİ EKLENDİ: ŞİFRE SIFIRLAMA İŞLEMİ
+  // 🔥 ŞİFRE SIFIRLAMA İŞLEMİ (Aynı kaldı)
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
-
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Lütfen şifrenizi sıfırlamak için e-posta adresinizi girin.',
+            'Please enter your email address to reset your password.',
           ),
-          backgroundColor: accentGreen,
+          backgroundColor: primaryOrange, // Renk güncellendi
         ),
       );
       return;
     }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() { _isLoading = true; });
     try {
-      // AuthService üzerinden Firebase'e sıfırlama e-postası gönder
       await _authService.sendPasswordResetEmail(email);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Şifre sıfırlama bağlantısı $email adresine gönderildi.',
+              'The password reset link has been sent to the email address $email.',
             ),
-            backgroundColor: primaryGreen,
+            backgroundColor: primaryOrange, // Renk güncellendi
           ),
         );
       }
@@ -121,46 +107,151 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() { _isLoading = false; });
     }
   }
 
-  // Özel Text Alanı Oluşturma Fonksiyonu (Aynı kaldı)
+  // 🔥 ÖZEL TEXT ALANI (RegisterScreen ile uyumlu stil ve gölge eklendi)
   Widget _buildMinimalTextField(
-    String label,
-    IconData icon,
-    bool isPassword,
-    TextInputType keyboardType,
-    TextEditingController controller,
-  ) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: isPassword,
-      style: const TextStyle(color: darkText),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: primaryGreen),
-        filled: true,
-        fillColor: healthCardBg,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.0),
-          borderSide: BorderSide(
-            color: secondaryGreen.withValues(alpha: 0.3),
-            width: 1.0,
+      String label,
+      IconData icon,
+      bool isPassword,
+      TextInputType keyboardType,
+      TextEditingController controller,
+      ) {
+    return Container(
+      // 🔥 GÖLGE EFEKTİ EKLENDİ
+      decoration: BoxDecoration(
+        color: white,
+        borderRadius: BorderRadius.circular(15.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: isPassword,
+        style: const TextStyle(color: darkTextColor), // Renk güncellendi
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: primaryOrange), // Renk güncellendi
+          filled: true,
+          fillColor: white, // Renk güncellendi
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15.0),
+            borderSide: const BorderSide(color: Colors.transparent, width: 0), // Çerçeve kaldırıldı
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15.0),
+            borderSide: const BorderSide(color: primaryOrange, width: 2.0), // Renk güncellendi
+          ),
+          labelStyle: const TextStyle(color: lightSecondaryTextColor), // Renk güncellendi
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 15.0,
+            horizontal: 15.0,
           ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.0),
-          borderSide: const BorderSide(color: primaryGreen, width: 2.0),
+      ),
+    );
+  }
+
+  // -----------------------------------------------------------
+  // 🔥 HEADER ALANI (RegisterScreen'den kopyalandı)
+  // -----------------------------------------------------------
+  Widget _buildHeader(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Container(
+      width: size.width,
+      height: size.height * 0.25,
+      decoration: const BoxDecoration(
+        color: headerBackgroundColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(50),
+          bottomRight: Radius.circular(50),
         ),
-        labelStyle: const TextStyle(color: darkText),
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 15.0,
-          horizontal: 15.0,
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryOrange, // Başlık gölgesi
+            blurRadius: 5,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Geri Butonu
+          Positioned(
+            top: 40,
+            left: 10,
+            child: Container(
+              decoration: BoxDecoration(
+                color: white.withOpacity(0.8),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5),
+                ],
+              ),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back_ios, color: darkTextColor, size: 24),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
+          // Başlık Metni
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 40.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Welcome Back!', // Geri dönen kullanıcı için başlık
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: darkTextColor, fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Log in to continue tracking your health.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: lightSecondaryTextColor, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -----------------------------------------------------------
+  // SAYFA GÖSTERGESİ FONKSİYONLARI (RegisterScreen'den kopyalandı)
+  // -----------------------------------------------------------
+  Widget _buildPageIndicator() {
+    List<Widget> list = [];
+    for (int i = 0; i < _totalPages; i++) {
+      list.add(_indicator(i == _currentPage));
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: list,
+    );
+  }
+
+  Widget _indicator(bool isActive) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      margin: const EdgeInsets.symmetric(horizontal: 5.0),
+      height: 8.0,
+      width: isActive ? 24.0 : 8.0,
+      decoration: BoxDecoration(
+        color: isActive ? darkTextColor : lightSecondaryTextColor.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(5),
       ),
     );
   }
@@ -168,153 +259,117 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: lightBackground,
+      backgroundColor: backgroundBeige, // Renk güncellendi
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. OVAL GEÇİŞLİ ÜST BAR (Aynı kaldı)
-            CurvedAppBar(
-              heightRatio: 0.35,
-              child: Center(
+            _buildHeader(context), // MINOA temalı header
+
+            // 🔥 TRANSFORM.TRANSLATE KULLANIMI (Görsel uyum için)
+            Transform.translate(
+              offset: const Offset(0, -40),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40.0,
+                ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Health App',
-                      style: TextStyle(
-                        color: white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 100), // Başlık ve form arasındaki boşluk
+
+                    // 2. GİRİŞ FORMU BÖLÜMÜ
+
+                    _buildMinimalTextField(
+                      'Email Address', // Metin güncellendi
+                      Icons.email_outlined,
+                      false,
+                      TextInputType.emailAddress,
+                      _emailController,
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildMinimalTextField(
+                      'Password', // Metin güncellendi
+                      Icons.lock_outline,
+                      true,
+                      TextInputType.visiblePassword,
+                      _passwordController,
+                    ),
+
+                    // Şifremi Unuttum Butonu (Renk ve hizalama güncellendi)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _isLoading ? null : _resetPassword,
+                        child: Text(
+                          'Forgot Password?', // Metin güncellendi
+                          style: TextStyle(
+                            color: primaryOrange, // Renk güncellendi
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+
+                    // Giriş Yap Butonu (Stil güncellendi)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55, // Yükseklik RegisterScreen ile aynı
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _signInUser,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryOrange, // Renk güncellendi
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15), // Radius güncellendi
+                          ),
+                          elevation: 8, // Gölge eklendi
+                          shadowColor: primaryOrange.withOpacity(0.5),
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: white)
+                            : const Text(
+                          'Log In', // Metin güncellendi
+                          style: TextStyle(
+                            color: white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // 3. Kayıt Ol Yönlendirme Bölümü (Stil ve Navigasyon güncellendi)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Don\'t have an account?', // Metin güncellendi
+                          style: TextStyle(color: darkTextColor.withOpacity(0.7)), // Renk güncellendi
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            // 🔥 ANİMASYONLU GEÇİŞ İÇİN ROTA KULLANIMI
+                            Navigator.pushNamed(context, '/register');
+                          },
+                          child: Text(
+                            'Sign Up', // Metin güncellendi
+                            style: TextStyle(
+                              color: primaryOrange, // Renk güncellendi
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Sayfa Göstergesi (En altta)
+                    const SizedBox(height: 20),
+                    _buildPageIndicator(),
+                    const SizedBox(height: 20),
                   ],
                 ),
-              ),
-            ),
-
-            // 2. GİRİŞ FORMU BÖLÜMÜ
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 30.0,
-                vertical: 30.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Hoş Geldiniz',
-                    style: TextStyle(
-                      color: darkText,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Hesabınıza giriş yapınız.',
-                    style: TextStyle(
-                      color: primaryGreen,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    'Sağlığınızı takip edin 🌿',
-                    style: TextStyle(color: secondaryGreen, fontSize: 14),
-                  ),
-                  const SizedBox(height: 30),
-
-                  _buildMinimalTextField(
-                    'E-posta Adresi',
-                    Icons.email_outlined,
-                    false,
-                    TextInputType.emailAddress,
-                    _emailController,
-                  ),
-                  const SizedBox(height: 15),
-
-                  _buildMinimalTextField(
-                    'Şifre',
-                    Icons.lock_outline,
-                    true,
-                    TextInputType.visiblePassword,
-                    _passwordController,
-                  ),
-
-                  // 🔥 GÜNCELLENDİ: Şifremi Unuttum Butonu, _resetPassword metoduna bağlandı.
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _isLoading ? null : _resetPassword,
-                      child: Text(
-                        'Şifremi Unuttum?',
-                        style: TextStyle(
-                          color: primaryGreen.withValues(alpha: 0.8),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Giriş Yap Butonu
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _signInUser,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        elevation: 5,
-                      ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: white)
-                          : const Text(
-                              'Giriş Yap',
-                              style: TextStyle(
-                                color: white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 3. Kayıt Ol Yönlendirme Bölümü (Aynı kaldı)
-            Padding(
-              padding: const EdgeInsets.only(top: 20.0, bottom: 20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Hesabın yok mu?',
-                    style: TextStyle(color: darkText),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RegisterScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Kayıt Ol',
-                      style: TextStyle(
-                        color: primaryGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           ],
