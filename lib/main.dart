@@ -31,9 +31,9 @@ import 'package:health_care/screens/water/water_success_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
 import 'package:health_care/screens/medication/medication_detail_screen.dart';
 import 'package:health_care/screens/medication/medication_add_screen.dart';
-import 'package:health_care/screens/settings_screen.dart';
-import 'package:health_care/screens/help_center_screen.dart';
-import 'package:health_care/screens/privacy_policy_screen.dart';
+import 'package:health_care/screens/settings_screen.dart'; // Yeni eklendi
+import 'package:health_care/screens/help_center_screen.dart'; // Yeni eklendi
+import 'package:health_care/screens/privacy_policy_screen.dart'; // Yeni eklendi
 
 
 void main() async {
@@ -93,11 +93,15 @@ class MyApp extends StatelessWidget {
         page = const WaterStatsScreen();
         break;
       case '/water/success':
-      // Rotadan argüman almayı gerektiriyorsa (örn: WaterSuccessScreen), argümanı burada kullanmalısınız.
-      // Basitleştirilmiş haliyle:
-        page = const WaterSuccessScreen(
-          achievedAmount: 2000,
-          goalAmount: 2000,
+      // 🔥 DÜZELTME: WaterSuccessScreen'in parametreleri artık dinamik olarak (argümanlardan) alınabilir.
+      // Eğer argüman yoksa, varsayılan 2000 değeri kullanılır.
+        final args = settings.arguments as Map<String, int>?;
+        final achievedAmount = args?['achievedAmount'] ?? 2000;
+        final goalAmount = args?['goalAmount'] ?? 2000;
+
+        page = WaterSuccessScreen(
+          achievedAmount: achievedAmount,
+          goalAmount: goalAmount,
         );
         break;
 
@@ -112,7 +116,7 @@ class MyApp extends StatelessWidget {
         page = const MedicationAddScreen();
         break;
 
-    // Settings Routes
+    // Settings Routes (Yeni eklendi)
       case '/settings':
         page = const SettingsScreen();
         break;
@@ -178,7 +182,6 @@ class MyApp extends StatelessWidget {
         },
       ),
 
-      // 🔥🔥🔥 Rotalar kaldırıldı ve yerine özel animasyon sağlayan onGenerateRoute eklendi.
       onGenerateRoute: _onGenerateRoute,
     );
   }
