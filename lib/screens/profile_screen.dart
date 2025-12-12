@@ -1,320 +1,377 @@
-// 📁 lib/screens/profile_screen.dart (Sadeleştirilmiş Başlık)
+// 📁 lib/screens/login_screen.dart (MINOA Teması ve Animasyon Uyumu)
 
 import 'package:flutter/material.dart';
-import 'package:health_care/theme/app_theme.dart';
 import '../services/auth_service.dart';
 
-// 🔥 PEMBE TONLAR VE BUTON RENKLERİ
-const Color _lightBackground = Color(0xFFFEEAFA); // Ana Arka Plan (feeafa)
-const Color _pastelPinkLight = Color(0xFFFFE5EC); // Form Alanı Arka Planı (ffe5ec)
-const Color _pastelPinkMedium = Color(0xFFFFC2D1); // Gradyan/Çerçeve (ffc2d1)
-const Color _buttonBlue = Color(0xFFff7ea0); // button pembe tonuna eşlendi
-const Color _buttonRed = Color(0xFFff0a54); // 'Hesabı Sil' butonu
 
-// 🔥 GRADYAN RENKLERİ KALDIRILDI, SADECE TANIMLARI KALDI (Kullanılmıyor)
-// const Color _gradientTop = Color(0xFFC97C99);
-// const Color _gradientBottom = Color(0xFFFFC2D1);
+// 🎨 MINOA ANA UYGULAMA RENK PALETİ
+const Color primaryOrange = Color(0xFFE49B6E); // Ana Turuncu (Soft Orange)
+const Color backgroundBeige = Color(0xFFFFF6EC); // Arka Plan Rengi
+const Color darkTextColor = Color(0xFF5B4A3A); // Koyu Metin Rengi (Dark Text/Brown)
+const Color lightSecondaryTextColor = Color(0xFF7B746E); // Açık İkincil Metin Rengi
+const Color white = Colors.white;
+const Color headerBackgroundColor = Color(0xFFFAE9D7); // Başlık Arka Plan Rengi
 
-// YAPI DEĞİŞİMİ: StatefulWidget
-class ProfileScreen extends StatefulWidget {
-  final String? username;
-  const ProfileScreen({super.key, this.username});
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  // 🔥 Controllers tanımlandı
-  final TextEditingController _usernameController = TextEditingController();
+class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  String? _initialEmail;
-  bool _isLoading = true;
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProfileData(); // Veri yükleme işlemini başlat
-  }
+  // Sayfa göstergesi için durum değişkenleri (Login, akışın 3. sayfası)
+  final int _currentPage = 2; // Index 2
+  final int _totalPages = 3;
 
   @override
   void dispose() {
-    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  // 🔥 YEREL VERİ ÇEKME VE BAŞLANGIÇ AYARLAMA (Aynı kalır)
-  Future<void> _loadProfileData() async {
-    final authService = AuthService();
-    final currentUser = authService.getCurrentUser();
-
-    // 1. E-posta
-    _initialEmail = currentUser?.email;
-
-    // 2. Kullanıcı Adı (Yerel Depolamadan çekilir)
-    String? localUsername = await authService.getLocalUsername();
-
-    if (localUsername == null) {
-      localUsername = await authService.fetchAndSaveInitialUsername();
-    }
-
-    if (mounted) {
-      setState(() {
-        _usernameController.text = localUsername ?? widget.username ?? 'Misafir';
-        _emailController.text = _initialEmail ?? 'E-posta adresi yok';
-        _passwordController.text = '';
-        _isLoading = false;
-      });
-    }
-  }
-
-  // 🔥 PROFİLİ DÜZENLE BUTONU İŞLEVİ (Aynı kalır)
-  Future<void> _updateLocalProfile() async {
-    setState(() => _isLoading = true);
+  // 🌟 GİRİŞ İŞLEMİ FONKSİYONU (Navigasyon korundu)
+  Future<void> _signInUser() async {
+    setState(() { _isLoading = true; });
 
     try {
-      final newUsername = _usernameController.text;
-
-      // Kullanıcı Adını Yerel Depolamaya Kaydet
-      await AuthService().saveLocalUsername(newUsername);
-
-      // Şifre simülasyonu
-      if (_passwordController.text.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Şifre güncelleme mantığı simüle edildi.'), backgroundColor: Color(0xFFC97C99)),
-        );
-      }
+      await _authService.signInUser(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil bilgileri kaydedildi!'), backgroundColor: Color(0xFFC97C99)),
+          const SnackBar(
+            content: Text('Giriş başarılı! Ana sayfaya yönlendiriliyorsunuz.'),
+            backgroundColor: primaryOrange, // Renk güncellendi
+          ),
+        );
+        // 🔥 YÖNLENDİRME KORUNDU: Uygulama geçmişini temizleyerek '/home' rotasına gider.
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+              (Route<dynamic> route) => false,
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kayıt başarısız'), backgroundColor: Colors.red),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      setState(() { _isLoading = false; });
     }
   }
 
-  // OTURUMU KAPATMA VE ÇIKIŞ DİYALOĞU (Aynı kalır)
-  Future<void> _handleSignOut(BuildContext context) async { /* ... */ }
-  void _showLogoutDialog(BuildContext context) { /* ... */ }
+  // 🔥 ŞİFRE SIFIRLAMA İŞLEMİ (Aynı kaldı)
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please enter your email address to reset your password.',
+          ),
+          backgroundColor: primaryOrange, // Renk güncellendi
+        ),
+      );
+      return;
+    }
+    setState(() { _isLoading = true; });
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'The password reset link has been sent to the email address $email.',
+            ),
+            backgroundColor: primaryOrange, // Renk güncellendi
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() { _isLoading = false; });
+    }
+  }
 
-  // SOFT TEXT FIELD (Aynı kalır)
-  Widget _buildSoftTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData prefixIcon,
-    bool isPassword = false,
-    bool readOnly = false,
-    IconData? suffixIcon,
-  }) {
+  // 🔥 ÖZEL TEXT ALANI (RegisterScreen ile uyumlu stil ve gölge eklendi)
+  Widget _buildMinimalTextField(
+      String label,
+      IconData icon,
+      bool isPassword,
+      TextInputType keyboardType,
+      TextEditingController controller,
+      ) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      // 🔥 GÖLGE EFEKTİ EKLENDİ
       decoration: BoxDecoration(
-        color: _pastelPinkLight.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: _pastelPinkMedium.withOpacity(0.4), width: 1),
+        color: white,
+        borderRadius: BorderRadius.circular(15.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.white.withOpacity(0.5),
-            offset: const Offset(-2, -2),
-            blurRadius: 3,
-          ),
-          BoxShadow(
-            color: _pastelPinkMedium.withOpacity(0.15),
-            offset: const Offset(2, 2),
-            blurRadius: 3,
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: TextField(
-        readOnly: readOnly,
         controller: controller,
+        keyboardType: keyboardType,
         obscureText: isPassword,
-        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDark, fontWeight: FontWeight.w500),
+        style: const TextStyle(color: darkTextColor), // Renk güncellendi
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMedium),
-          prefixIcon: Icon(prefixIcon, color: AppColors.textMedium, size: 20),
-          suffixIcon: suffixIcon != null
-              ? Icon(suffixIcon, color: AppColors.textLight, size: 20)
-              : null,
-          border: InputBorder.none,
+          prefixIcon: Icon(icon, color: primaryOrange), // Renk güncellendi
+          filled: true,
+          fillColor: white, // Renk güncellendi
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15.0),
+            borderSide: const BorderSide(color: Colors.transparent, width: 0), // Çerçeve kaldırıldı
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15.0),
+            borderSide: const BorderSide(color: primaryOrange, width: 2.0), // Renk güncellendi
+          ),
+          labelStyle: const TextStyle(color: lightSecondaryTextColor), // Renk güncellendi
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 15.0,
+            horizontal: 15.0,
+          ),
         ),
+      ),
+    );
+  }
+
+  // -----------------------------------------------------------
+  // 🔥 HEADER ALANI (RegisterScreen'den kopyalandı)
+  // -----------------------------------------------------------
+  Widget _buildHeader(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Container(
+      width: size.width,
+      height: size.height * 0.25,
+      decoration: const BoxDecoration(
+        color: headerBackgroundColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(50),
+          bottomRight: Radius.circular(50),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryOrange, // Başlık gölgesi
+            blurRadius: 5,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Geri Butonu
+          Positioned(
+            top: 40,
+            left: 10,
+            child: Container(
+              decoration: BoxDecoration(
+                color: white.withOpacity(0.8),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5),
+                ],
+              ),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back_ios, color: darkTextColor, size: 24),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
+          // Başlık Metni
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 40.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Welcome Back!', // Geri dönen kullanıcı için başlık
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: darkTextColor, fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Log in to continue tracking your health.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: lightSecondaryTextColor, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -----------------------------------------------------------
+  // SAYFA GÖSTERGESİ FONKSİYONLARI (RegisterScreen'den kopyalandı)
+  // -----------------------------------------------------------
+  Widget _buildPageIndicator() {
+    List<Widget> list = [];
+    for (int i = 0; i < _totalPages; i++) {
+      list.add(_indicator(i == _currentPage));
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: list,
+    );
+  }
+
+  Widget _indicator(bool isActive) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      margin: const EdgeInsets.symmetric(horizontal: 5.0),
+      height: 8.0,
+      width: isActive ? 24.0 : 8.0,
+      decoration: BoxDecoration(
+        color: isActive ? darkTextColor : lightSecondaryTextColor.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(5),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: _lightBackground,
-        body: Center(child: CircularProgressIndicator(color: _pastelPinkMedium)),
-      );
-    }
-
-    // 🔥 headerHeight KALDIRILDIĞI İÇİN ARTIK KULLANILMIYOR
-    // final double headerHeight = MediaQuery.of(context).size.height * 0.35;
-
     return Scaffold(
-      backgroundColor: _lightBackground,
-      // 🔥 APP BAR ARTIK Scaffold'un App Bar'ı olarak tanımlandı
-      appBar: AppBar(
-        backgroundColor: _lightBackground,
-        elevation: 0,
-        title: Text(
-          'Profile',
-          style: AppTextStyles.headlineMedium.copyWith(
-              color: Colors.black,
-              fontSize: 25,
-              fontWeight: FontWeight.w600),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.black, size: 28),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Ayarlar açılıyor...')),
-              );
-            },
-          ),
-        ],
-      ),
-
-      body: SingleChildScrollView( // Stack yapısı kaldırıldı
-        padding: const EdgeInsets.symmetric(horizontal: 25.0),
+      backgroundColor: backgroundBeige, // Renk güncellendi
+      body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: 10),
+            _buildHeader(context), // MINOA temalı header
 
-            // örnek Profil İkonu
-            Center(
-              child: Stack(
-                children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: _pastelPinkLight,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _pastelPinkMedium, width: 2),
+            // 🔥 TRANSFORM.TRANSLATE KULLANIMI (Görsel uyum için)
+            Transform.translate(
+              offset: const Offset(0, -40),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 100), // Başlık ve form arasındaki boşluk
+
+                    // 2. GİRİŞ FORMU BÖLÜMÜ
+
+                    _buildMinimalTextField(
+                      'Email Address', // Metin güncellendi
+                      Icons.email_outlined,
+                      false,
+                      TextInputType.emailAddress,
+                      _emailController,
                     ),
-                    child: const Icon(Icons.person, size: 70, color: AppColors.textDark),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: _pastelPinkMedium,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                    const SizedBox(height: 20),
+
+                    _buildMinimalTextField(
+                      'Password', // Metin güncellendi
+                      Icons.lock_outline,
+                      true,
+                      TextInputType.visiblePassword,
+                      _passwordController,
+                    ),
+
+                    // Şifremi Unuttum Butonu (Renk ve hizalama güncellendi)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _isLoading ? null : _resetPassword,
+                        child: Text(
+                          'Forgot Password?', // Metin güncellendi
+                          style: TextStyle(
+                            color: primaryOrange, // Renk güncellendi
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
-                      child: const Icon(Icons.edit, color: Colors.white, size: 20),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                    const SizedBox(height: 10),
 
-            const SizedBox(height: 10),
+                    // Giriş Yap Butonu (Stil güncellendi)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55, // Yükseklik RegisterScreen ile aynı
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _signInUser,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryOrange, // Renk güncellendi
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15), // Radius güncellendi
+                          ),
+                          elevation: 8, // Gölge eklendi
+                          shadowColor: primaryOrange.withOpacity(0.5),
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: white)
+                            : const Text(
+                          'Log In', // Metin güncellendi
+                          style: TextStyle(
+                            color: white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
 
-            const SizedBox(height: 30),
+                    // 3. Kayıt Ol Yönlendirme Bölümü (Stil ve Navigasyon güncellendi)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Don\'t have an account?', // Metin güncellendi
+                          style: TextStyle(color: darkTextColor.withOpacity(0.7)), // Renk güncellendi
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            // 🔥 ANİMASYONLU GEÇİŞ İÇİN ROTA KULLANIMI
+                            Navigator.pushNamed(context, '/register');
+                          },
+                          child: Text(
+                            'Sign Up', // Metin güncellendi
+                            style: TextStyle(
+                              color: primaryOrange, // Renk güncellendi
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
 
-            // 4. BASİTLEŞTİRİLMİŞ FORM ALANLARI
-
-            // Kullanıcı Adı
-            _buildSoftTextField(
-              controller: _usernameController,
-              label: 'Kullanıcı Adı',
-              prefixIcon: Icons.person_outline,
-              suffixIcon: Icons.close,
-              readOnly: _isLoading,
-            ),
-
-            // E-posta (Salt Okunur - KAPALI)
-            _buildSoftTextField(
-              controller: _emailController,
-              label: 'Email (Değiştirilemez)',
-              prefixIcon: Icons.email_outlined,
-              readOnly: true,
-              suffixIcon: Icons.lock_outline,
-            ),
-
-            // Şifre
-            _buildSoftTextField(
-              controller: _passwordController,
-              label: 'Şifre Değiştir',
-              prefixIcon: Icons.lock_outline,
-              isPassword: true,
-              readOnly: _isLoading,
-              suffixIcon: Icons.visibility_off_outlined,
-            ),
-
-
-            const SizedBox(height: 30),
-
-
-            // 5. Butonlar
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _updateLocalProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _buttonBlue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  elevation: 5,
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                  'Değişimleri Kaydet',
-                  style: AppTextStyles.labelLarge.copyWith(color: Colors.white, fontSize: 18),
+                    // Sayfa Göstergesi (En altta)
+                    const SizedBox(height: 20),
+                    _buildPageIndicator(),
+                    const SizedBox(height: 20),
+                  ],
                 ),
               ),
             ),
-
-            const SizedBox(height: 15),
-
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: TextButton(
-                onPressed: _isLoading ? null : () => _showLogoutDialog(context),
-                style: TextButton.styleFrom(
-                  foregroundColor: _buttonRed,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  padding: const EdgeInsets.all(0),
-                ),
-                child: Text(
-                  'Hesaptan Çıkış Yap',
-                  style: AppTextStyles.labelLarge.copyWith(color: _buttonRed, fontSize: 18),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 40),
           ],
         ),
       ),
