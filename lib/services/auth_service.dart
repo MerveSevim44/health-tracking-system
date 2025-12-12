@@ -212,4 +212,66 @@ class AuthService {
     }
     return null;
   }
+
+  // ----------------------------------------------------
+  // 9. PROFİL GÜNCELLEME METODU (YENİ EKLENDİ)
+  // ----------------------------------------------------
+  /// Kullanıcı adını ve email'i günceller
+  Future<void> updateProfile({
+    String? username,
+    String? email,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw 'Kullanıcı oturum açmamış.';
+    }
+
+    try {
+      // Username güncelle
+      if (username != null && username.trim().isNotEmpty) {
+        await _database.ref()
+            .child('users')
+            .child(user.uid)
+            .child('username')
+            .set(username.trim());
+        await saveLocalUsername(username.trim());
+        debugPrint('Kullanıcı adı güncellendi: ${username.trim()}');
+      }
+
+      // Email güncelle (Firebase Auth ve Realtime Database)
+      if (email != null && email.trim().isNotEmpty) {
+        // Firebase Auth'ta email'i güncelle
+        await user.updateEmail(email.trim());
+        // Realtime Database'de email'i güncelle
+        await _database.ref()
+            .child('users')
+            .child(user.uid)
+            .child('email')
+            .set(email.trim());
+        debugPrint('Email güncellendi: ${email.trim()}');
+      }
+
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      if (e.code == 'email-already-in-use') {
+        errorMessage = 'Bu e-posta adresi başka bir hesap tarafından kullanılıyor.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Geçersiz e-posta formatı.';
+      } else if (e.code == 'requires-recent-login') {
+        errorMessage = 'Email güncellemek için lütfen tekrar giriş yapın.';
+      } else {
+        errorMessage = 'Profil güncellenirken bir hata oluştu: ${e.message}';
+      }
+      debugPrint('PROFİL GÜNCELLEME HATA: $errorMessage');
+      throw errorMessage;
+    } catch (e) {
+      debugPrint('GENEL HATA: $e');
+      throw 'Profil güncellenirken beklenmedik bir hata oluştu.';
+    }
+  }
+
+  /// Kullanıcı email'ini getirir
+  String? getCurrentUserEmail() {
+    return _auth.currentUser?.email;
+  }
 }

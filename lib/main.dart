@@ -31,6 +31,9 @@ import 'package:health_care/screens/water/water_success_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
 import 'package:health_care/screens/medication/medication_detail_screen.dart';
 import 'package:health_care/screens/medication/medication_add_screen.dart';
+import 'package:health_care/screens/settings_screen.dart';
+import 'package:health_care/screens/help_center_screen.dart';
+import 'package:health_care/screens/privacy_policy_screen.dart';
 
 
 void main() async {
@@ -107,6 +110,17 @@ class MyApp extends StatelessWidget {
         break;
       case '/medication/add':
         page = const MedicationAddScreen();
+        break;
+
+    // Settings Routes
+      case '/settings':
+        page = const SettingsScreen();
+        break;
+      case '/help':
+        page = const HelpCenterScreen();
+        break;
+      case '/privacy':
+        page = const PrivacyPolicyScreen();
         break;
 
       default:

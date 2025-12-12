@@ -11,8 +11,8 @@ import 'package:health_care/models/medication_model.dart';
 
 // GEREKLİ: AuthService importu
 import '../services/auth_service.dart';
-// 🔥 YENİ EKRAN İMPORTU: Artık ProfilePlaceholder yerine ProfileScreen kullanılıyor.
-import 'profile_screen.dart';
+// 🔥 YENİ EKRAN İMPORTU: SettingsScreen kullanılıyor.
+import 'settings_screen.dart';
 
 // 📁 lib/screens/pastel_home_navigation.dart
 
@@ -58,7 +58,7 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
       const WeeklyDashboardScreen(),
       const WaterHomeScreen(),
       const MedicationHomeScreen(),
-      ProfileScreen(username: _username),       // Index 4: ProfileScreen'e aktarılıyor
+      const SettingsScreen(), // Index 4: Settings Screen
     ];
 
     if (index >= 0 && index < screens.length) {

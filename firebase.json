@@ -1,1 +1,25 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"health-tracking-system-700bf","appId":"1:1098373753872:android:3927a1d586a82e08ac2e95","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"health-tracking-system-700bf","configurations":{"android":"1:1098373753872:android:3927a1d586a82e08ac2e95","ios":"1:1098373753872:ios:56d02d083650d500ac2e95","macos":"1:1098373753872:ios:56d02d083650d500ac2e95","web":"1:1098373753872:web:0816c581f41923ecac2e95","windows":"1:1098373753872:web:b0ac372863be05c5ac2e95"}}}}}}
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "health-tracking-system-700bf",
+                    "appId": "1:1098373753872:android:3927a1d586a82e08ac2e95",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "health-tracking-system-700bf",
+                    "configurations": {
+                        "android": "1:1098373753872:android:3927a1d586a82e08ac2e95",
+                        "ios": "1:1098373753872:ios:56d02d083650d500ac2e95",
+                        "macos": "1:1098373753872:ios:56d02d083650d500ac2e95",
+                        "web": "1:1098373753872:web:0816c581f41923ecac2e95",
+                        "windows": "1:1098373753872:web:b0ac372863be05c5ac2e95"
+                    }
+                }
+            }
+        }
+    }
+}

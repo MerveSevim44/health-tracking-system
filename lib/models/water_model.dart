@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:health_care/widgets/water/drink_selector.dart';
 import 'package:health_care/services/water_service.dart';
 import 'package:health_care/models/water_firebase_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WaterIntakeEntry {
   final DrinkType drinkType;
@@ -60,7 +61,10 @@ class WaterModel extends ChangeNotifier {
   int get dailyGoal => _dailyGoal;
   
   // Initialize Firebase listener (call after user login)
-  void initialize([DateTime? date]) {
+  void initialize([DateTime? date]) async {
+    // Load daily goal from SharedPreferences
+    await _loadDailyGoalFromLocal();
+    
     final targetDate = date ?? DateTime.now();
     _service.getWaterLogsForDate(targetDate).listen((logs) {
       final dateKey = _getDateKey(targetDate);
@@ -72,6 +76,20 @@ class WaterModel extends ChangeNotifier {
       // Handle errors silently if user not authenticated
       debugPrint('WaterModel init error: $error');
     });
+  }
+
+  // Load daily goal from SharedPreferences
+  Future<void> _loadDailyGoalFromLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedGoal = prefs.getInt('water_goal');
+      if (savedGoal != null && savedGoal > 0) {
+        _dailyGoal = savedGoal;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading daily goal from local storage: $e');
+    }
   }
 
   // Sadece SU için günlük toplam ml (hedef için)
@@ -136,8 +154,15 @@ class WaterModel extends ChangeNotifier {
     }
   }
 
-  void setDailyGoal(int goal) {
+  Future<void> setDailyGoal(int goal) async {
     _dailyGoal = goal;
+    // Save to SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('water_goal', goal);
+    } catch (e) {
+      debugPrint('Error saving daily goal to local storage: $e');
+    }
     notifyListeners();
   }
 
