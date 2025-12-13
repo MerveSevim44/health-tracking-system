@@ -130,14 +130,8 @@ class WaterModel extends ChangeNotifier {
       );
       // Update weekly stats (sadece su için)
       await _service.updateWeeklyStats();
-    } else {
-      // Diğer içecekler: drink_logs'a kaydet (varsayılan 200ml)
-      await _service.addDrinkLog(
-        drinkType: drinkTypeString,
-        amount: 200, // 1 bardak = 200ml
-        count: 1,
-      );
     }
+    // Diğer içecekler için: DrinkProvider kullanılacak, burada işlem yapma
     
     notifyListeners();
   }

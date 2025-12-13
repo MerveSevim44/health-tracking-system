@@ -15,6 +15,7 @@ import 'package:health_care/widgets/water/add_custom_drink_modal.dart';
 import 'package:health_care/widgets/water/today_drink_logs.dart';
 import 'package:health_care/screens/water/water_success_screen.dart';
 import 'package:health_care/screens/water/drink_info_page.dart';
+import 'package:health_care/utils/page_transitions.dart';
 import 'package:intl/intl.dart';
 
 class WaterHomeScreen extends StatefulWidget {
@@ -58,18 +59,6 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
       if (_counterAmount > 0) {
         await waterModel.addWaterIntake(drinkType, _counterAmount);
         
-        // Su için de log kaydet
-        await drinkProvider.addDrinkLog(DrinkLog(
-          id: '',
-          drinkId: 'water',
-          drinkName: drinkType.name,
-          amount: _counterAmount,
-          cups: 0,
-          timestamp: DateTime.now(),
-          iconUrl: '💧',
-          color: drinkType.color,
-        ));
-        
         setState(() {
           _counterAmount = 0;
         });
@@ -81,10 +70,7 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
         }
       }
     } else {
-      // Diğer içecekler için: 1 bardak = 200ml varsayılan
-      await waterModel.addWaterIntake(drinkType, 200);
-      
-      // Drink log kaydet
+      // Diğer içecekler için: DrinkProvider kullan
       await drinkProvider.addDrinkLog(DrinkLog(
         id: '',
         drinkId: drinkType.name.toLowerCase(),
@@ -122,13 +108,10 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
 
   void _showGoalAchievedScreen() {
     final waterModel = Provider.of<WaterModel>(context, listen: false);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WaterSuccessScreen(
-          achievedAmount: waterModel.getCurrentIntake(_selectedDate),
-          goalAmount: waterModel.dailyGoal,
-        ),
+    Navigator.of(context).pushScale(
+      WaterSuccessScreen(
+        achievedAmount: waterModel.getCurrentIntake(_selectedDate),
+        goalAmount: waterModel.dailyGoal,
       ),
     );
   }
@@ -149,12 +132,9 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
       orElse: () => DrinkDatabase.allDrinks[0], // Default to water
     );
     
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DrinkInfoPage(
-          drinkInfo: drinkInfo,
-        ),
+    Navigator.of(context).pushFadeSlide(
+      DrinkInfoPage(
+        drinkInfo: drinkInfo,
       ),
     );
   }

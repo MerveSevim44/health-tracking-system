@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:health_care/theme/app_theme.dart';
 import 'package:health_care/screens/daily_mood_home_screen.dart';
 import 'package:health_care/screens/weekly_dashboard_screen.dart';
-import 'package:health_care/screens/mood_selection_screen.dart';
 import 'package:health_care/screens/water/water_home_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
+import 'package:health_care/screens/chat_screen.dart';
+import 'package:health_care/screens/settings_screen.dart';
+import 'package:health_care/theme/modern_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/water_model.dart';
 import 'package:health_care/models/medication_model.dart';
-
-// GEREKLİ: AuthService importu
 import '../services/auth_service.dart';
-// 🔥 YENİ EKRAN İMPORTU: SettingsScreen kullanılıyor.
-import 'settings_screen.dart';
-
-// 📁 lib/screens/pastel_home_navigation.dart
+import 'dart:ui';
 
 class PastelHomeNavigation extends StatefulWidget {
   const PastelHomeNavigation({super.key});
@@ -23,9 +19,9 @@ class PastelHomeNavigation extends StatefulWidget {
   State<PastelHomeNavigation> createState() => _PastelHomeNavigationState();
 }
 
-class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
+class _PastelHomeNavigationState extends State<PastelHomeNavigation> with TickerProviderStateMixin {
   int _currentIndex = 0;
-  String? _username; // Kullanıcı adını tutmak için değişken
+  String? _username;
   late Future<void> _initData;
 
   @override
@@ -35,13 +31,11 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
   }
 
   Future<void> _initializeData() async {
-    // Model başlatmaları
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<WaterModel>().initialize();
       context.read<MedicationModel>().initialize();
     });
 
-    // Kullanıcı adını çek
     final username = await AuthService().fetchUsername();
     if (mounted) {
       setState(() {
@@ -50,104 +44,189 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
     }
   }
 
-  // 🔥 YÖNLENDİRME METODU: Kullanıcı adını alt widget'lara aktarır
   Widget _getScreen(int index) {
-    // Tüm ekranlar dinamik olarak, _username verisi çekildikten sonra oluşturulur
     final List<Widget> screens = [
-      DailyMoodHomeScreen(username: _username),  // Index 0: Kullanıcı adı aktarılıyor
+      DailyMoodHomeScreen(username: _username),
       const WeeklyDashboardScreen(),
+      const ChatScreen(),
       const WaterHomeScreen(),
       const MedicationHomeScreen(),
-      const SettingsScreen(), // Index 4: Settings Screen
+      const SettingsScreen(),
     ];
 
     if (index >= 0 && index < screens.length) {
       return screens[index];
     }
-    return const Center(child: Text("Hata: Geçersiz sayfa indeksi.", style: TextStyle(color: Colors.red)));
+    return const Center(
+      child: Text(
+        "Error: Invalid page",
+        style: TextStyle(color: Colors.red),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Veri yüklenirken veya kullanıcı adı çekilirken yükleniyor ekranı göster
     return FutureBuilder(
-        future: _initData,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          // Veri yüklendikten sonra normal navigasyon yapısını döndür
+      future: _initData,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
-            body: _getScreen(_currentIndex),
-            bottomNavigationBar: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    // AppColors.textLight.withOpacity ile uyumlu olması beklenir
-                    color: AppColors.textLight.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildNavItem(Icons.home_outlined, 0),        // Home
-                      _buildNavItem(Icons.bar_chart_outlined, 1),   // Dashboard
-                      _buildNavItem(Icons.water_drop_outlined, 2),  // Water
-                      _buildNavItem(Icons.medication_liquid, 3),    // Medication
-                      _buildNavItem(Icons.person_outline, 4),       // Profile
-                    ],
-                  ),
-                ),
+            backgroundColor: ModernAppColors.darkBg,
+            body: Center(
+              child: CircularProgressIndicator(
+                color: ModernAppColors.vibrantCyan,
               ),
             ),
-            floatingActionButton: FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MoodSelectionScreen(),
-                  ),
-                );
-              },
-              backgroundColor: AppColors.moodHappy,
-              elevation: 4,
-              child: const Icon(Icons.add, color: Colors.white, size: 32),
-            ),
-            floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
           );
         }
+
+        return Scaffold(
+          backgroundColor: ModernAppColors.darkBg,
+          body: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            switchInCurve: Curves.easeInOutCubic,
+            switchOutCurve: Curves.easeInOutCubic,
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+                  child: child,
+                ),
+              );
+            },
+            child: KeyedSubtree(
+              key: ValueKey<int>(_currentIndex),
+              child: _getScreen(_currentIndex),
+            ),
+          ),
+          bottomNavigationBar: _buildModernNavBar(),
+        );
+      },
     );
   }
 
-  Widget _buildNavItem(IconData icon, int index) {
+  Widget _buildModernNavBar() {
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(30),
+        topRight: Radius.circular(30),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          height: 85,
+          decoration: BoxDecoration(
+            color: ModernAppColors.navbarBg.withOpacity(0.95),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+            border: Border(
+              top: BorderSide(
+                color: ModernAppColors.deepPurple.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 30,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(Icons.home_rounded, 'Home', 0),
+                  _buildNavItem(Icons.bar_chart_rounded, 'Stats', 1),
+                  _buildNavItem(Icons.psychology_rounded, 'AI', 2),
+                  _buildNavItem(Icons.water_drop_rounded, 'Water', 3),
+                  _buildNavItem(Icons.medication_rounded, 'Meds', 4),
+                  _buildNavItem(Icons.person_rounded, 'Profile', 5),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = _currentIndex == index;
+    
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
+        if (_currentIndex != index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          
+          // Haptic feedback would go here if available
+        }
       },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        child: Icon(
-          icon,
-          color: isSelected ? AppColors.textDark : AppColors.textLight,
-          size: 28,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 16 : 8,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? ModernAppColors.primaryGradient
+              : null,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: ModernAppColors.deepPurple.withOpacity(0.4),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
+              : [],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedScale(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutCubic,
+              scale: isSelected ? 1.1 : 1.0,
+              child: Icon(
+                icon,
+                color: isSelected
+                    ? ModernAppColors.lightText
+                    : ModernAppColors.mutedText,
+                size: 26,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: ModernAppColors.lightText,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 }
-
-// ⚠️ Not: ProfilePlaceholder sınıfı kaldırılmıştır. ProfileScreen widget'ı
-// ayrı bir dosyada tanımlı olmalıdır.

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ------------------------------------
 // MODEL/STATE MANAGEMENT IMPORTS
@@ -11,18 +12,23 @@ import 'package:provider/provider.dart';
 import 'models/mood_model.dart';
 import 'models/water_model.dart';
 import 'models/medication_model.dart';
+import 'providers/drink_provider.dart';
 
 // ------------------------------------
 // TEMA VE DİĞER WIDGET IMPORTS
 // ------------------------------------
 import 'package:health_care/theme/app_theme.dart';
+import 'package:health_care/utils/page_transitions.dart';
 
 // ------------------------------------
 // EKRAN IMPORTS
 // ------------------------------------
+import 'package:health_care/screens/splash_screen.dart'; // 🔥 SPLASH SCREEN
+import 'package:health_care/screens/landing_page.dart'; // 🔥 NEW MODERN LANDING PAGE
 import 'package:health_care/screens/first_screen.dart'; // 🔥 GİRİŞ YAPILMADIYSA GÖRÜNÜR
 import 'package:health_care/screens/login_screen.dart';
 import 'package:health_care/screens/register_screen.dart';
+import 'package:health_care/screens/auth_wrapper.dart'; // 🔥 Login sonrası mood kontrolü
 import 'package:health_care/screens/pastel_home_navigation.dart'; // 🔥 GİRİŞ YAPILDIYSA GÖRÜNÜR
 import 'package:health_care/screens/breathing_exercise_screen.dart';
 import 'package:health_care/screens/water/water_home_screen.dart';
@@ -39,6 +45,9 @@ import 'package:health_care/screens/privacy_policy_screen.dart'; // Yeni eklendi
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
   // Firebase başlatma
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -50,6 +59,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MoodModel()),
         ChangeNotifierProvider(create: (_) => WaterModel()),
         ChangeNotifierProvider(create: (_) => MedicationModel()),
+        ChangeNotifierProvider(create: (_) => DrinkProvider()..initialize()),
       ],
       child: const MyApp(),
     ),
@@ -66,7 +76,13 @@ class MyApp extends StatelessWidget {
     final Widget page;
     switch (settings.name) {
     // AUTH ROTALARI
+      case '/splash':
+        page = const SplashScreen(); // 🔥 SPLASH SCREEN
+        break;
       case '/':
+      case '/landing':
+        page = const LandingPage(); // 🔥 NEW MODERN LANDING PAGE
+        break;
       case '/first':
         page = const FirstScreen();
         break;
@@ -132,24 +148,41 @@ class MyApp extends StatelessWidget {
         return MaterialPageRoute(builder: (_) => const FirstScreen());
     }
 
-    // Özel Animasyonlu Geçişi (Soldan Kayma) uygula
-    return PageRouteBuilder(
-      settings: settings, // Rota ayarlarını korur
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        // Soldan sağa kayarak geçiş animasyonu ayarları
-        const begin = Offset(1.0, 0.0); // Sağdan başla
-        const end = Offset.zero;       // Sola kay
-        const curve = Curves.ease;     // Yumuşak geçiş eğrisi
-
-        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-
-        return SlideTransition(
-          position: animation.drive(tween),
-          child: child,
-        );
-      },
-    );
+    // Rota tipine göre farklı animasyonlar uygula
+    switch (settings.name) {
+      // Splash screen için fade geçiş
+      case '/':
+      case '/splash':
+        return PageTransitions.fadeTransition(page, settings: settings);
+      
+      // Landing page için özel fade geçiş
+      case '/landing':
+        return PageTransitions.fadeTransition(page, settings: settings);
+      
+      case '/first':
+        return PageTransitions.fadeTransition(page, settings: settings);
+      
+      // Login/Register için yumuşak fade+slide
+      case '/login':
+      case '/register':
+        return PageTransitions.fadeSlideTransition(page, settings: settings);
+      
+      // Home'a geçişte etkileyici scale+fade
+      case '/home':
+        return PageTransitions.zoomTransition(page, settings: settings);
+      
+      // Breathing egzersizi için zoom geçiş
+      case '/breathing':
+        return PageTransitions.zoomTransition(page, settings: settings);
+      
+      // Water success için scale geçiş
+      case '/water/success':
+        return PageTransitions.scaleTransition(page, settings: settings);
+      
+      // Diğer tüm sayfalar için yumuşak material geçiş
+      default:
+        return PageTransitions.materialTransition(page, settings: settings);
+    }
   }
 
 
@@ -160,27 +193,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: pastelAppTheme,
 
-      // HOME YERİNE STREAMBUILDER KULLANILARAK OTURUM KONTROLÜ
-      home: StreamBuilder<User?>(
-        // Firebase Auth'taki oturum değişikliklerini dinler
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          // 1. Durum: Bağlantı bekleniyor (Yükleniyor ekranı)
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          // 2. Durum: Kullanıcı giriş yapmış
-          if (snapshot.hasData && snapshot.data != null) {
-            return const PastelHomeNavigation();
-          }
-
-          // 3. Durum: Kullanıcı giriş yapmamışsa
-          return const FirstScreen();
-        },
-      ),
+      // Always show splash screen first
+      home: const SplashScreen(),
 
       onGenerateRoute: _onGenerateRoute,
     );

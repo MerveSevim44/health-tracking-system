@@ -1,17 +1,20 @@
-// 📁 lib/screens/register_screen.dart (Basit Metin Eklenmiş Versiyon)
-
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import 'dart:ui';
 
-// 🎨 ANA UYGULAMA RENK PALETİ
-const Color primaryOrange = Color(0xFFE49B6E); // Soft Orange
-const Color backgroundBeige = Color(0xFFFFF6EC); // Background Beige
-const Color darkTextColor = Color(0xFF5B4A3A); // Dark Text/Brown
-const Color lightSecondaryTextColor = Color(0xFF7B746E); // Light Secondary Text Color
-const Color white = Colors.white;
-const Color headerBackgroundColor = Color(0xFFFAE9D7); // Başlık Arka Plan Rengi
-
-
+/// 🎨 Fresh Modern Color Palette
+class AppColors {
+  static const deepPurple = Color(0xFF6C63FF);
+  static const deepIndigo = Color(0xFF4834DF);
+  static const vibrantCyan = Color(0xFF00D4FF);
+  static const electricBlue = Color(0xFF0984E3);
+  static const darkBg = Color(0xFF0F0F1E);
+  static const cardBg = Color(0xFF1A1A2E);
+  static const lightText = Color(0xFFFFFFFF);
+  static const mutedText = Color(0xFFB8B8D1);
+  static const accentGreen = Color(0xFF00D9A3);
+  static const accentPink = Color(0xFFFF6B9D);
+}
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,273 +23,585 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStateMixin {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
   final AuthService _authService = AuthService();
+  
   bool _isLoading = false;
-
-  final int _currentPage = 1;
-  final int _totalPages = 3;
-
-  // ... (Page Indicator Functions ve diğer metotlar aynı kalır) ...
-  Widget _buildPageIndicator() {
-    List<Widget> list = [];
-    for (int i = 0; i < _totalPages; i++) {
-      list.add(_indicator(i == _currentPage));
-    }
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: list,
+  bool _obscurePassword = true;
+  bool _agreedToTerms = false;
+  
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late AnimationController _glowController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
     );
-  }
-
-  Widget _indicator(bool isActive) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      margin: const EdgeInsets.symmetric(horizontal: 5.0),
-      height: 8.0,
-      width: isActive ? 24.0 : 8.0,
-      decoration: BoxDecoration(
-        color: isActive ? darkTextColor : lightSecondaryTextColor.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(5),
-      ),
+    
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     );
+    
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
+    );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+    
+    _fadeController.forward();
+    _slideController.forward();
   }
-  // -----------------------------------------------------------
-
+  
   @override
   void dispose() {
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    _glowController.dispose();
     super.dispose();
   }
-
+  
   Future<void> _registerUser() async {
+    if (_usernameController.text.trim().isEmpty ||
+        _emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty) {
+      _showMessage('Please fill in all fields', isError: true);
+      return;
+    }
+    
+    if (!_agreedToTerms) {
+      _showMessage('Please agree to the terms and conditions', isError: true);
+      return;
+    }
+    
+    if (_passwordController.text.length < 6) {
+      _showMessage('Password must be at least 6 characters', isError: true);
+      return;
+    }
+    
     setState(() { _isLoading = true; });
+    
     try {
       await _authService.registerUser(
-        username: _usernameController.text,
-        email: _emailController.text,
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful! Redirecting to login page.'), backgroundColor: primaryOrange),
-        );
-        Navigator.pushReplacementNamed(context, '/login');
+        _showMessage('Account created successfully!');
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.redAccent),
-        );
+        _showMessage(e.toString(), isError: true);
       }
     } finally {
-      if (mounted) {
-        setState(() { _isLoading = false; });
-      }
+      if (mounted) setState(() { _isLoading = false; });
     }
   }
-
-
-  Widget _buildMinimalTextField(
-      String label, IconData icon, bool isPassword, TextInputType keyboardType, TextEditingController controller) {
-    return Container(
-      decoration: BoxDecoration(
-        color: white,
-        borderRadius: BorderRadius.circular(15.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: isPassword,
-        style: const TextStyle(color: darkTextColor),
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: primaryOrange),
-          filled: true,
-          fillColor: white,
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15.0),
-            borderSide: const BorderSide(color: Colors.transparent, width: 0),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15.0),
-            borderSide: const BorderSide(color: primaryOrange, width: 2.0),
-          ),
-          labelStyle: const TextStyle(color: lightSecondaryTextColor),
-          contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
-        ),
+  
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade400 : AppColors.accentGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        margin: const EdgeInsets.all(20),
       ),
     );
   }
-
-  // -----------------------------------------------------------
-  // HEADER (Unchanged)
-  // -----------------------------------------------------------
-  Widget _buildHeader(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    const Color headerBackgroundColor = Color(0xFFFAE9D7);
-
-    return Container(
-      width: size.width,
-      height: size.height * 0.25,
-      decoration: BoxDecoration(
-        color: headerBackgroundColor,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(50),
-          bottomRight: Radius.circular(50),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: primaryOrange, // Başlık gölgesi
-            blurRadius: 5,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Back Button
-          Positioned(
-            top: 40,
-            left: 10,
-            child: Container(
-              decoration: BoxDecoration(
-                color: white.withOpacity(0.8),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5),
-                ],
-              ),
-              child: IconButton(
-                icon: Icon(Icons.arrow_back_ios, color: darkTextColor, size: 24),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ),
-          // Title Text
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 40.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Join MINOA!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: darkTextColor, fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Create your account.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: lightSecondaryTextColor, fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundBeige,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(context),
-
-            // Sliding form effect
-            Transform.translate(
-              offset: const Offset(0, -40),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-
-                    // 🔥 YENİ EKLENDİ: Sade metin
-                    const SizedBox(height: 60),
-                    Text(
-                      'Access AI-driven emotional analysis and personalized health tracking tools.',
-                      style: TextStyle(color: Colors.black26, fontSize: 16),
-                      //textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 30),
-
-
-                    // Input Fields
-                    _buildMinimalTextField('Username', Icons.person_outline, false, TextInputType.name, _usernameController),
-                    const SizedBox(height: 20),
-                    _buildMinimalTextField('Email Address', Icons.email_outlined, false, TextInputType.emailAddress, _emailController),
-                    const SizedBox(height: 20),
-                    _buildMinimalTextField('Password', Icons.lock_outline, true, TextInputType.visiblePassword, _passwordController),
-                    const SizedBox(height: 50),
-
-                    // Register Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _registerUser,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryOrange,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 8,
-                          shadowColor: primaryOrange.withOpacity(0.5),
-                        ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: white)
-                            : const Text('Create Account',
-                            style: TextStyle(color: white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Log In Link
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Already have an account?', style: TextStyle(color: darkTextColor.withOpacity(0.7))),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/login');
-                          },
-                          child: Text(
-                            'Log In',
-                            style: TextStyle(color: primaryOrange, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Page Indicator
-                    const SizedBox(height: 20),
-                    _buildPageIndicator(),
-                    const SizedBox(height: 20),
-                  ],
+      backgroundColor: AppColors.darkBg,
+      body: Stack(
+        children: [
+          // Animated background
+          _buildAnimatedBackground(),
+          
+          // Main content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      
+                      // Back button
+                      _buildBackButton(),
+                      
+                      const SizedBox(height: 40),
+                      
+                      // Welcome text
+                      _buildWelcomeSection(),
+                      
+                      const SizedBox(height: 50),
+                      
+                      // Register form
+                      _buildRegisterForm(),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // Terms checkbox
+                      _buildTermsCheckbox(),
+                      
+                      const SizedBox(height: 35),
+                      
+                      // Register button
+                      _buildRegisterButton(),
+                      
+                      const SizedBox(height: 30),
+                      
+                      // Divider
+                      _buildDivider(),
+                      
+                      const SizedBox(height: 30),
+                      
+                      // Login link
+                      _buildLoginLink(),
+                      
+                      const SizedBox(height: 30),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildAnimatedBackground() {
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.darkBg,
+                AppColors.deepIndigo.withOpacity(0.3),
+                AppColors.darkBg,
+              ],
+            ),
+          ),
         ),
+        AnimatedBuilder(
+          animation: _glowController,
+          builder: (context, child) {
+            return Positioned(
+              top: -100 + (_glowController.value * 50),
+              left: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.accentGreen.withOpacity(0.3),
+                      AppColors.accentGreen.withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        AnimatedBuilder(
+          animation: _glowController,
+          builder: (context, child) {
+            return Positioned(
+              bottom: -80 - (_glowController.value * 30),
+              right: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.accentPink.withOpacity(0.2),
+                      AppColors.accentPink.withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildBackButton() {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: AppColors.deepPurple.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: const Icon(
+          Icons.arrow_back_ios_new,
+          color: AppColors.lightText,
+          size: 20,
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildWelcomeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Animated icon
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.accentGreen, AppColors.vibrantCyan],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accentGreen.withOpacity(0.5),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.person_add_rounded,
+            color: AppColors.lightText,
+            size: 40,
+          ),
+        ),
+        
+        const SizedBox(height: 30),
+        
+        const Text(
+          'Create\nAccount',
+          style: TextStyle(
+            fontSize: 48,
+            fontWeight: FontWeight.bold,
+            color: AppColors.lightText,
+            height: 1.2,
+            letterSpacing: -1,
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        const Text(
+          'Join MINOA and start your health journey',
+          style: TextStyle(
+            fontSize: 16,
+            color: AppColors.mutedText,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildRegisterForm() {
+    return Column(
+      children: [
+        // Username field
+        _buildGlassTextField(
+          controller: _usernameController,
+          label: 'Username',
+          icon: Icons.person_outline,
+        ),
+        
+        const SizedBox(height: 20),
+        
+        // Email field
+        _buildGlassTextField(
+          controller: _emailController,
+          label: 'Email Address',
+          icon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        
+        const SizedBox(height: 20),
+        
+        // Password field
+        _buildGlassTextField(
+          controller: _passwordController,
+          label: 'Password (min. 6 characters)',
+          icon: Icons.lock_outline,
+          obscureText: _obscurePassword,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              color: AppColors.mutedText,
+            ),
+            onPressed: () {
+              setState(() { _obscurePassword = !_obscurePassword; });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildGlassTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBg.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.deepPurple.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            obscureText: obscureText,
+            style: const TextStyle(
+              color: AppColors.lightText,
+              fontSize: 16,
+            ),
+            decoration: InputDecoration(
+              labelText: label,
+              labelStyle: const TextStyle(
+                color: AppColors.mutedText,
+                fontSize: 15,
+              ),
+              prefixIcon: Icon(icon, color: AppColors.accentGreen, size: 22),
+              suffixIcon: suffixIcon,
+              filled: false,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: AppColors.accentGreen, width: 2),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTermsCheckbox() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: Checkbox(
+            value: _agreedToTerms,
+            onChanged: (value) {
+              setState(() { _agreedToTerms = value ?? false; });
+            },
+            activeColor: AppColors.accentGreen,
+            checkColor: AppColors.darkBg,
+            side: BorderSide(color: AppColors.mutedText.withOpacity(0.5)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              text: 'I agree to the ',
+              style: const TextStyle(
+                color: AppColors.mutedText,
+                fontSize: 14,
+              ),
+              children: [
+                TextSpan(
+                  text: 'Terms & Conditions',
+                  style: TextStyle(
+                    color: AppColors.vibrantCyan,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const TextSpan(text: ' and '),
+                TextSpan(
+                  text: 'Privacy Policy',
+                  style: TextStyle(
+                    color: AppColors.vibrantCyan,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildRegisterButton() {
+    return Container(
+      width: double.infinity,
+      height: 65,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.accentGreen, AppColors.vibrantCyan],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentGreen.withOpacity(0.5),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _registerUser,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: AppColors.lightText,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Create Account',
+                    style: TextStyle(
+                      color: AppColors.lightText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Icon(Icons.arrow_forward_rounded, color: AppColors.lightText),
+                ],
+              ),
+      ),
+    );
+  }
+  
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            color: AppColors.mutedText.withOpacity(0.2),
+            thickness: 1,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          child: Text(
+            'OR',
+            style: TextStyle(
+              color: AppColors.mutedText,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+            color: AppColors.mutedText.withOpacity(0.2),
+            thickness: 1,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildLoginLink() {
+    return Center(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Already have an account? ',
+            style: TextStyle(
+              color: AppColors.mutedText,
+              fontSize: 15,
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pushReplacementNamed(context, '/login');
+            },
+            child: const Text(
+              'Sign In',
+              style: TextStyle(
+                color: AppColors.vibrantCyan,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

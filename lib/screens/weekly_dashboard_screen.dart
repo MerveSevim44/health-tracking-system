@@ -1,386 +1,474 @@
 import 'package:flutter/material.dart';
-import 'package:health_care/theme/app_theme.dart';
-import 'package:health_care/widgets/pastel_components.dart';
-import 'package:health_care/widgets/mood_blob.dart';
+import 'package:health_care/theme/modern_colors.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-// 📁 lib/screens/weekly_dashboard_screen.dart
-
-class WeeklyDashboardScreen extends StatelessWidget {
+class WeeklyDashboardScreen extends StatefulWidget {
   const WeeklyDashboardScreen({super.key});
+
+  @override
+  State<WeeklyDashboardScreen> createState() => _WeeklyDashboardScreenState();
+}
+
+class _WeeklyDashboardScreenState extends State<WeeklyDashboardScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _floatController;
+  String _selectedPeriod = 'Week';
+
+  @override
+  void initState() {
+    super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: GradientBackground(
-        colors: const [
-          AppColors.gradientMintStart,
-          AppColors.gradientMintEnd,
-        ],
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                _buildHeader(),
-                
-                const SizedBox(height: 24),
-
-                // Time filter (Month/Week/Day)
-                _buildTimeFilter(),
-
-                const SizedBox(height: 24),
-
-                // Weekly mood circles
-                _buildWeeklyMoodCircles(),
-
-                const SizedBox(height: 32),
-
-                // Mood trend chart
-                _buildMoodTrendCard(),
-
-                const SizedBox(height: 20),
-
-                // Stress level chart
-                _buildStressLevelCard(),
-
-                const SizedBox(height: 32),
-
-                // Exercises section
-                const Text(
-                  'Exercises for you',
-                  style: AppTextStyles.headlineMedium,
-                ),
-
-                const SizedBox(height: 16),
-
-                _buildExerciseCard(),
-              ],
+      backgroundColor: ModernAppColors.darkBg,
+      body: Stack(
+        children: [
+          // Animated background
+          _buildAnimatedBackground(),
+          
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  
+                  // Header
+                  _buildHeader(),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Period selector
+                  _buildPeriodSelector(),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Weekly mood overview
+                  _buildWeeklyMoodOverview(),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Mood trend chart
+                  _buildMoodTrendChart(),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Activity stats
+                  _buildActivityStats(),
+                  
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildAnimatedBackground() {
+    return Stack(
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: ModernAppColors.backgroundGradient,
+          ),
+        ),
+        AnimatedBuilder(
+          animation: _floatController,
+          builder: (context, child) {
+            return Positioned(
+              bottom: 100 + (_floatController.value * 60),
+              left: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      ModernAppColors.vibrantCyan.withOpacity(0.2),
+                      ModernAppColors.vibrantCyan.withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Dear Alice,',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.textMedium,
+        const Text(
+          'Your Analytics',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Track your progress and insights',
+          style: TextStyle(
+            fontSize: 16,
+            color: ModernAppColors.mutedText,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodSelector() {
+    final periods = ['Day', 'Week', 'Month'];
+    
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: ModernAppColors.cardBg,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: periods.map((period) {
+          final isSelected = _selectedPeriod == period;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedPeriod = period;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: isSelected ? ModernAppColors.primaryGradient : null,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  period,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected
+                        ? ModernAppColors.lightText
+                        : ModernAppColors.mutedText,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 15,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'good morning',
-              style: AppTextStyles.headlineLarge,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyMoodOverview() {
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final moods = [0.8, 0.6, 0.7, 0.9, 0.5, 0.8, 0.7];
+    final colors = [
+      ModernAppColors.accentGreen,
+      ModernAppColors.accentOrange,
+      ModernAppColors.vibrantCyan,
+      ModernAppColors.accentPink,
+      ModernAppColors.accentYellow,
+      ModernAppColors.deepPurple,
+      ModernAppColors.accentGreen,
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Weekly Mood Overview',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
+          ),
+        ),
+        const SizedBox(height: 15),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: ModernAppColors.cardBg,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(7, (index) {
+              return Column(
+                children: [
+                  Container(
+                    width: 35,
+                    height: 35 + (moods[index] * 30),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          colors[index],
+                          colors[index].withOpacity(0.6),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    days[index],
+                    style: const TextStyle(
+                      color: ModernAppColors.mutedText,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMoodTrendChart() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Mood Trend',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
+          ),
+        ),
+        const SizedBox(height: 15),
+        Container(
+          height: 200,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: ModernAppColors.cardBg,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: 2,
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(
+                    color: ModernAppColors.mutedText.withOpacity(0.1),
+                    strokeWidth: 1,
+                  );
+                },
+              ),
+              titlesData: FlTitlesData(
+                show: true,
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                      if (value.toInt() >= 0 && value.toInt() < days.length) {
+                        return Text(
+                          days[value.toInt()],
+                          style: const TextStyle(
+                            color: ModernAppColors.mutedText,
+                            fontSize: 12,
+                          ),
+                        );
+                      }
+                      return const Text('');
+                    },
+                  ),
+                ),
+                leftTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              minX: 0,
+              maxX: 6,
+              minY: 0,
+              maxY: 10,
+              lineBarsData: [
+                LineChartBarData(
+                  spots: const [
+                    FlSpot(0, 7),
+                    FlSpot(1, 5),
+                    FlSpot(2, 6),
+                    FlSpot(3, 8),
+                    FlSpot(4, 4),
+                    FlSpot(5, 7),
+                    FlSpot(6, 6),
+                  ],
+                  isCurved: true,
+                  gradient: ModernAppColors.primaryGradient,
+                  barWidth: 3,
+                  isStrokeCapRound: true,
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, barData, index) {
+                      return FlDotCirclePainter(
+                        radius: 5,
+                        color: ModernAppColors.vibrantCyan,
+                        strokeWidth: 2,
+                        strokeColor: ModernAppColors.cardBg,
+                      );
+                    },
+                  ),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        ModernAppColors.deepPurple.withOpacity(0.3),
+                        ModernAppColors.deepPurple.withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActivityStats() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Activity Summary',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
+          ),
+        ),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatItem(
+                'Mood Logs',
+                '28',
+                Icons.mood_rounded,
+                ModernAppColors.accentPink,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatItem(
+                'Water',
+                '48',
+                Icons.water_drop_rounded,
+                ModernAppColors.vibrantCyan,
+              ),
             ),
           ],
         ),
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.textLight.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatItem(
+                'Medications',
+                '21',
+                Icons.medication_rounded,
+                ModernAppColors.accentOrange,
               ),
-            ],
-          ),
-          child: const Icon(
-            Icons.notifications_outlined,
-            color: AppColors.textDark,
-          ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatItem(
+                'Exercises',
+                '14',
+                Icons.self_improvement_rounded,
+                ModernAppColors.accentGreen,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildTimeFilter() {
-    return Row(
-      children: [
-        _buildFilterChip('Month', false),
-        const SizedBox(width: 8),
-        _buildFilterChip('Week', true),
-        const SizedBox(width: 8),
-        _buildFilterChip('Day', false),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(String label, bool isSelected) {
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.textDark : Colors.white.withValues(alpha: 0.5),
+        color: ModernAppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.bodyMedium.copyWith(
-          color: isSelected ? Colors.white : AppColors.textDark,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
         ),
       ),
-    );
-  }
-
-  Widget _buildWeeklyMoodCircles() {
-    final weekData = [
-      {'day': 'M', 'score': 12},
-      {'day': 'T', 'score': 13},
-      {'day': 'W', 'score': 16},
-      {'day': 'T', 'score': 10},
-      {'day': 'F', 'score': 14},
-      {'day': 'S', 'score': 15},
-      {'day': 'S', 'score': 11},
-    ];
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: weekData.map((data) {
-        return WeeklyMoodCircle(
-          day: data['day'] as String,
-          moodScore: data['score'] as int,
-          isSelected: data['day'] == 'T',
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildMoodTrendCard() {
-    return PastelCard(
-      backgroundColor: Colors.white,
-      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Last week',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Mood unstable',
-                    style: AppTextStyles.bodyLarge,
-                  ),
-                ],
-              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.pastelPink,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Edit',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.moodAnxious,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 120,
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: const FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 3),
-                      FlSpot(1, 2),
-                      FlSpot(2, 4),
-                      FlSpot(3, 2.5),
-                      FlSpot(4, 3.5),
-                      FlSpot(5, 4),
-                      FlSpot(6, 3),
-                    ],
-                    isCurved: true,
-                    color: AppColors.moodCalm,
-                    barWidth: 3,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.moodCalm.withValues(alpha: 0.2),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Average stress level',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    '67% in a week',
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                ],
-              ),
-              SizedBox(
-                width: 80,
+                width: 40,
                 height: 40,
-                child: BarChart(
-                  BarChartData(
-                    gridData: const FlGridData(show: false),
-                    titlesData: const FlTitlesData(show: false),
-                    borderData: FlBorderData(show: false),
-                    barGroups: [
-                      BarChartGroupData(x: 0, barRods: [
-                        BarChartRodData(
-                          toY: 5,
-                          color: AppColors.pastelPink,
-                          width: 8,
-                          borderRadius: BorderRadius.circular(4),
-                        )
-                      ]),
-                      BarChartGroupData(x: 1, barRods: [
-                        BarChartRodData(
-                          toY: 7,
-                          color: AppColors.moodHappy,
-                          width: 8,
-                          borderRadius: BorderRadius.circular(4),
-                        )
-                      ]),
-                      BarChartGroupData(x: 2, barRods: [
-                        BarChartRodData(
-                          toY: 4,
-                          color: AppColors.pastelMint,
-                          width: 8,
-                          borderRadius: BorderRadius.circular(4),
-                        )
-                      ]),
-                    ],
-                  ),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: ModernAppColors.lightText,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStressLevelCard() {
-    return PastelCard(
-      backgroundColor: Colors.white,
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Stress Peaks',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textLight,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    gradient: const LinearGradient(
-                      colors: [
-                        AppColors.pastelPink,
-                        AppColors.moodHappy,
-                        AppColors.pastelMint,
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildLegendItem(AppColors.pastelPink, 'Core'),
-                    const SizedBox(width: 16),
-                    _buildLegendItem(AppColors.moodHappy, 'REM'),
-                    const SizedBox(width: 16),
-                    _buildLegendItem(AppColors.pastelMint, 'Post-REM'),
-                  ],
-                ),
-              ],
+          const SizedBox(height: 10),
+          Text(
+            label,
+            style: const TextStyle(
+              color: ModernAppColors.mutedText,
+              fontSize: 13,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textMedium,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildExerciseCard() {
-    return ExerciseCard(
-      title: 'Relieve stress',
-      subtitle: 'Breathing practice',
-      duration: '15 min',
-      backgroundColor: AppColors.pastelPink,
-      illustration: const MoodBlob(
-        size: 60,
-        color: AppColors.moodAnxious,
-        expression: MoodExpression.calm,
-      ),
-      onTap: () {},
     );
   }
 }

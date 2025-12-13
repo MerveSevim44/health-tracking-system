@@ -1,396 +1,490 @@
 import 'package:flutter/material.dart';
-import 'package:health_care/theme/app_theme.dart';
-import 'package:health_care/widgets/pastel_components.dart';
-import 'package:health_care/widgets/mood_blob.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:health_care/theme/modern_colors.dart';
+import 'dart:ui';
 
-// 📁 lib/screens/daily_mood_home_screen.dart
 
-class DailyMoodHomeScreen extends StatelessWidget {
-
+class DailyMoodHomeScreen extends StatefulWidget {
   final String? username;
 
   const DailyMoodHomeScreen({super.key, this.username});
 
   @override
+  State<DailyMoodHomeScreen> createState() => _DailyMoodHomeScreenState();
+}
+
+class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _floatController;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Kullanıcı adını göstermek için varsayılan değer
-    final displayUsername = username ?? 'Misafir';
+    final displayUsername = widget.username ?? 'Friend';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 🔥 KALDIRILDI: _buildHeader(displayUsername),
-
-              const SizedBox(height: 32),
-
-              // Greeting
-              Text(
-                'Merhaba ${displayUsername}! 👋',
-                style: AppTextStyles.displayMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Aklında neler var?',
-                style: AppTextStyles.headlineMedium.copyWith(
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Quick actions
-              _buildQuickActions(),
-
-              const SizedBox(height: 32),
-
-              // Daily Mood Log
-              const Text(
-                'Günlük Ruh Hali Kaydı',
-                style: AppTextStyles.headlineMedium,
-              ),
-
-              const SizedBox(height: 16),
-
-              _buildDailyMoodLog(),
-
-              const SizedBox(height: 32),
-
-              // Today's Task
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      backgroundColor: ModernAppColors.darkBg,
+      body: Stack(
+        children: [
+          // Animated background
+          _buildAnimatedBackground(),
+          
+          // Main content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Bugünün Görevleri',
-                    style: AppTextStyles.headlineMedium,
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Tümünü Gör',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.moodCalm,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 10),
+                  
+                  // Greeting Header
+                  _buildGreetingHeader(displayUsername),
+                  
+                  const SizedBox(height: 30),
+                  
+                  // Quick Actions
+                  _buildQuickActions(context),
+                  
+                  const SizedBox(height: 30),
+                  
+                  // Mood Score Card
+                  _buildMoodScoreCard(),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Today's Stats
+                  _buildTodayStats(),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Recent Activities
+                  _buildRecentActivities(),
+                  
+                  const SizedBox(height: 20),
                 ],
               ),
-
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: StatsCard(
-                      title: 'Ruh Hali\nSkorun',
-                      value: '7.5',
-                      backgroundColor: AppColors.pastelYellow,
-                      icon: const MoodBlob(
-                        size: 40,
-                        color: AppColors.moodHappy,
-                        expression: MoodExpression.happy,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatsCard(
-                      title: 'Seri\nBilgisi',
-                      value: '12 Gün',
-                      backgroundColor: AppColors.pastelPeach,
-                      icon: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.moodHappy,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.local_fire_department,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Sleep Summary (from Analytics screen reference)
-              _buildSleepSummary(),
-
-              const SizedBox(height: 24),
-
-              // My Mood breakdown
-              _buildMyMood(),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildQuickActions() {
-    return Row(
+  Widget _buildAnimatedBackground() {
+    return Stack(
       children: [
-        _buildQuickActionChip('😊', 'Ruh Hali', AppColors.pastelYellow),
-        const SizedBox(width: 8),
-        _buildQuickActionChip('🧘', 'Meditasyon', AppColors.pastelLavender),
-        const SizedBox(width: 8),
-        _buildQuickActionChip('🎵', 'Müzik', AppColors.pastelPink),
+        Container(
+          decoration: const BoxDecoration(
+            gradient: ModernAppColors.backgroundGradient,
+          ),
+        ),
+        AnimatedBuilder(
+          animation: _floatController,
+          builder: (context, child) {
+            return Positioned(
+              top: 100 + (_floatController.value * 50),
+              right: -100,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      ModernAppColors.deepPurple.withOpacity(0.2),
+                      ModernAppColors.deepPurple.withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ],
     );
   }
 
-  Widget _buildQuickActionChip(String emoji, String label, Color color) {
+  Widget _buildGreetingHeader(String username) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hello, $username! 👋',
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'How are you feeling today?',
+          style: TextStyle(
+            fontSize: 16,
+            color: ModernAppColors.mutedText,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final actions = [
+      {
+        'icon': Icons.mood_rounded,
+        'label': 'Log Mood',
+        'color': ModernAppColors.accentPink,
+        'route': '/mood',
+      },
+      {
+        'icon': Icons.water_drop_rounded,
+        'label': 'Water',
+        'color': ModernAppColors.vibrantCyan,
+        'route': '/water/home',
+      },
+      {
+        'icon': Icons.medication_rounded,
+        'label': 'Meds',
+        'color': ModernAppColors.accentOrange,
+        'route': '/medication',
+      },
+      {
+        'icon': Icons.self_improvement_rounded,
+        'label': 'Breathe',
+        'color': ModernAppColors.accentGreen,
+        'route': '/breathing',
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Quick Actions',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
+          ),
+        ),
+        const SizedBox(height: 15),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: actions.map((action) {
+            return _buildQuickActionButton(
+              context,
+              action['icon'] as IconData,
+              action['label'] as String,
+              action['color'] as Color,
+              action['route'] as String,
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionButton(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Color color,
+    String route,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        if (route == '/mood') {
+          Navigator.pushNamed(context, '/mood');
+        } else {
+          Navigator.pushNamed(context, route);
+        }
+      },
+      child: Container(
+        width: 80,
+        height: 90,
+        decoration: BoxDecoration(
+          color: ModernAppColors.cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 45,
+              height: 45,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: ModernAppColors.lightText,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoodScoreCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
+        gradient: ModernAppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          ModernAppColors.primaryShadow(opacity: 0.4),
+        ],
       ),
       child: Row(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w600,
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.emoji_emotions_rounded,
+              color: ModernAppColors.lightText,
+              size: 35,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDailyMoodLog() {
-    final moodData = [
-      {'day': 'Cmt', 'color': AppColors.moodHappy},
-      {'day': 'Paz', 'color': AppColors.moodNeutral},
-      {'day': 'Pzt', 'color': AppColors.moodCalm},
-      {'day': 'Sal', 'color': AppColors.moodSad},
-      {'day': 'Çar', 'color': AppColors.moodHappy},
-    ];
-
-    return PastelCard(
-      backgroundColor: AppColors.pastelMint,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Bu Hafta',
-                style: AppTextStyles.bodyLarge,
-              ),
-              TextButton(
-                onPressed: () {},
-                child: Text(
-                  'Şimdi Atla',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.moodAnxious,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: moodData.map((data) {
-              return MoodTile(
-                day: data['day'] as String,
-                color: data['color'] as Color,
-                isToday: data['day'] == 'Çar',
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSleepSummary() {
-    return PastelCard(
-      backgroundColor: AppColors.pastelPink,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Uyku Özeti',
-                style: AppTextStyles.headlineMedium,
-              ),
-              TextButton(
-                onPressed: () {},
-                child: Text(
-                  'Düzenle',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.moodAnxious,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 100,
-            child: BarChart(
-              BarChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        const times = ['23:00', '00:00', '01:00', '02:00', '03:00'];
-                        if (value.toInt() < times.length) {
-                          return Text(
-                            times[value.toInt()],
-                            style: AppTextStyles.bodySmall,
-                          );
-                        }
-                        return const Text('');
-                      },
-                    ),
-                  ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                barGroups: List.generate(5, (index) {
-                  final colors = [
-                    AppColors.pastelPink,
-                    AppColors.moodCalm,
-                    AppColors.moodHappy,
-                    AppColors.pastelBlue,
-                    AppColors.pastelMint,
-                  ];
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: (index + 1) * 2.0,
-                        color: colors[index],
-                        width: 12,
-                        borderRadius: BorderRadius.circular(6),
-                      )
-                    ],
-                  );
-                }),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildLegendItem(AppColors.pastelPink, 'Temel'),
-              _buildLegendItem(AppColors.moodHappy, 'REM'),
-              _buildLegendItem(AppColors.pastelMint, 'Post-REM'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMyMood() {
-    final moods = [
-      {'label': 'Üzgün düşünceli', 'percentage': '61%'},
-      {'label': 'Minnettar', 'percentage': '15%'},
-      {'label': 'Kızgın', 'percentage': '24%'},
-    ];
-
-    return PastelCard(
-      backgroundColor: AppColors.pastelLavender,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Ruh Hali Dağılımım',
-                style: AppTextStyles.headlineMedium,
-              ),
-              TextButton(
-                onPressed: () {},
-                child: Text(
-                  'Tümünü Gör',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.moodCalm,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...moods.map((mood) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.emoji_emotions, size: 24, color: AppColors.moodHappy),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    mood['label']!,
-                    style: AppTextStyles.bodyMedium,
+                const Text(
+                  'Your Mood Score',
+                  style: TextStyle(
+                    color: ModernAppColors.lightText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  '8.5',
+                  style: TextStyle(
+                    color: ModernAppColors.lightText,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  mood['percentage']!,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
+                  'Great today! 🎉',
+                  style: TextStyle(
+                    color: ModernAppColors.lightText.withOpacity(0.9),
+                    fontSize: 13,
                   ),
                 ),
               ],
             ),
-          )),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLegendItem(Color color, String label) {
-    return Row(
+  Widget _buildTodayStats() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
+        const Text(
+          "Today's Progress",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
           ),
         ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textMedium,
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Water',
+                '6/8',
+                'glasses',
+                Icons.water_drop_rounded,
+                ModernAppColors.vibrantCyan,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Meds',
+                '2/3',
+                'taken',
+                Icons.medication_rounded,
+                ModernAppColors.accentOrange,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(
+    String title,
+    String value,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernAppColors.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              color: ModernAppColors.mutedText,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: ModernAppColors.lightText,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: ModernAppColors.mutedText,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentActivities() {
+    final activities = [
+      {'title': 'Morning meditation', 'time': '8:30 AM', 'icon': Icons.self_improvement},
+      {'title': 'Mood check-in', 'time': '10:15 AM', 'icon': Icons.mood},
+      {'title': 'Water logged', 'time': '11:30 AM', 'icon': Icons.water_drop},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Recent Activities',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
           ),
         ),
+        const SizedBox(height: 15),
+        ...activities.map((activity) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ModernAppColors.cardBg,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 45,
+                  height: 45,
+                  decoration: BoxDecoration(
+                    color: ModernAppColors.deepPurple.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    activity['icon'] as IconData,
+                    color: ModernAppColors.deepPurple,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        activity['title'] as String,
+                        style: const TextStyle(
+                          color: ModernAppColors.lightText,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        activity['time'] as String,
+                        style: const TextStyle(
+                          color: ModernAppColors.mutedText,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ],
     );
   }

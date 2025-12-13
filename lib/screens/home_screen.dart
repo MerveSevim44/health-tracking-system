@@ -4,6 +4,7 @@ import 'package:health_care/models/mood_model.dart';
 import 'package:health_care/models/water_model.dart';
 import 'package:health_care/screens/chat.dart';
 import 'package:health_care/theme/water_theme.dart';
+import 'package:health_care/utils/page_transitions.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -358,9 +359,8 @@ class ConversationCard extends StatelessWidget {
                             ? () {
                           // Ruh hali seçilmişse ChatScreen'e yönlendir
                           // chat.dart dosyasından ChatScreen'i çağırır
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const ChatScreen()),
+                          Navigator.of(context).pushFadeSlide(
+                            const ChatScreen(),
                           );
                         }
                             : () {

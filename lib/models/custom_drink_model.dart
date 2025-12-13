@@ -163,13 +163,17 @@ class DrinkLog {
   }
 
   factory DrinkLog.fromJson(String id, Map<String, dynamic> json) {
+    // WaterService formatı için uyumluluk (type field'ı kullanılıyor)
+    final drinkName = json['drinkName'] as String? ?? json['type'] as String? ?? 'Unknown';
+    final cups = json['cups'] as int? ?? json['count'] as int? ?? 1;
+    
     return DrinkLog(
       id: id,
-      drinkId: json['drinkId'] as String? ?? '',
-      drinkName: json['drinkName'] as String? ?? 'Unknown',
-      amount: json['amount'] as int? ?? 200,
+      drinkId: json['drinkId'] as String? ?? json['type'] as String? ?? '',
+      drinkName: drinkName,
+      amount: json['amount'] as int? ?? json['amountML'] as int? ?? 200,
       unit: json['unit'] as String? ?? 'ml',
-      cups: json['cups'] as int? ?? 1,
+      cups: cups,
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'] as String)
           : DateTime.now(),
