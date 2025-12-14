@@ -11,6 +11,7 @@ enum MedicationType {
   syrup,
   injection,
   oralDrops,
+  drops,
   spray,
   eyeDrops,
   earDrops,
@@ -19,6 +20,7 @@ enum MedicationType {
   suppository,
   inhaler,
   patch,
+  vitamin,
 }
 
 /// Extension for medication type properties
@@ -38,6 +40,8 @@ extension MedicationTypeExtension on MedicationType {
         return 'İğne (IM/SC/IV)';
       case MedicationType.oralDrops:
         return 'Oral Damla';
+      case MedicationType.drops:
+        return 'Damla';
       case MedicationType.spray:
         return 'Sprey';
       case MedicationType.eyeDrops:
@@ -54,6 +58,8 @@ extension MedicationTypeExtension on MedicationType {
         return 'İnhaler';
       case MedicationType.patch:
         return 'Patch';
+      case MedicationType.vitamin:
+        return 'Vitamin';
     }
   }
 
@@ -70,6 +76,7 @@ extension MedicationTypeExtension on MedicationType {
       case MedicationType.injection:
         return Icons.vaccines;
       case MedicationType.oralDrops:
+      case MedicationType.drops:
       case MedicationType.eyeDrops:
       case MedicationType.earDrops:
         return Icons.water_drop;
@@ -84,6 +91,8 @@ extension MedicationTypeExtension on MedicationType {
         return Icons.wind_power;
       case MedicationType.patch:
         return Icons.square;
+      case MedicationType.vitamin:
+        return Icons.restaurant_rounded;
     }
   }
 
@@ -100,6 +109,7 @@ extension MedicationTypeExtension on MedicationType {
       case MedicationType.injection:
         return '1 dose';
       case MedicationType.oralDrops:
+      case MedicationType.drops:
         return '5 drops';
       case MedicationType.spray:
         return '1 spray';
@@ -115,6 +125,8 @@ extension MedicationTypeExtension on MedicationType {
         return '1 puff';
       case MedicationType.patch:
         return '1 patch';
+      case MedicationType.vitamin:
+        return '1 tablet';
     }
   }
 
@@ -130,6 +142,7 @@ extension MedicationTypeExtension on MedicationType {
       case MedicationType.injection:
         return 'Kas/deri altı/damar yoluyla';
       case MedicationType.oralDrops:
+      case MedicationType.drops:
         return 'Suya damlatılır';
       case MedicationType.spray:
         return 'Burun/ağız içine sıkılır';
@@ -146,6 +159,8 @@ extension MedicationTypeExtension on MedicationType {
         return 'Ağızdan nefes ile alınır';
       case MedicationType.patch:
         return 'Cilde yapıştırılır';
+      case MedicationType.vitamin:
+        return 'Su ile yutulur';
     }
   }
 
@@ -229,12 +244,21 @@ extension MedicationTypeExtension on MedicationType {
           description: '24-72 saat',
         );
       case MedicationType.oralDrops:
+      case MedicationType.drops:
         return MedicationFrequencyRecommendation(
           morning: true,
           afternoon: false,
           evening: true,
           timesPerDay: 2,
           description: 'İlaca göre değişir',
+        );
+      case MedicationType.vitamin:
+        return MedicationFrequencyRecommendation(
+          morning: true,
+          afternoon: false,
+          evening: false,
+          timesPerDay: 1,
+          description: '1 kez/gün',
         );
     }
   }
@@ -252,6 +276,7 @@ extension MedicationTypeExtension on MedicationType {
       case MedicationType.injection:
         return const Color(0xFFFF6B6B);
       case MedicationType.oralDrops:
+      case MedicationType.drops:
       case MedicationType.eyeDrops:
       case MedicationType.earDrops:
         return const Color(0xFF4FC3F7);
@@ -266,6 +291,8 @@ extension MedicationTypeExtension on MedicationType {
         return const Color(0xFFB0BEC5);
       case MedicationType.patch:
         return const Color(0xFFD4A373);
+      case MedicationType.vitamin:
+        return const Color(0xFFFF9F43);
     }
   }
 

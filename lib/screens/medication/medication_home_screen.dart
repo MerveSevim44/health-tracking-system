@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/medication_model.dart';
 import 'package:health_care/models/medication_firebase_model.dart';
-import 'package:health_care/screens/medication/medication_detail_enhanced_screen.dart';
+import 'package:health_care/screens/medication/edit_medication_screen.dart';
 import 'package:health_care/theme/modern_colors.dart';
 
 class MedicationHomeScreen extends StatefulWidget {
@@ -47,10 +47,16 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
         await Future.delayed(const Duration(milliseconds: 500));
       }
       
+      debugPrint('[LOAD DATA] Loading medications for date: ${_selectedDate}');
+      
+      // Get all medications and filter by due date
       final allMedications = model.medicationsFirebase
-          .where((med) => med.active)
+          .where((med) => med.isMedicationDueOnDate(_selectedDate))
           .toList();
       
+      debugPrint('[LOAD DATA] Found ${allMedications.length} medications due on ${_selectedDate}');
+      
+      // Load intakes for each medication
       final Map<String, List<MedicationIntake>> intakesMap = {};
       for (final med in allMedications) {
         final intakes = await model.getIntakesForMedicationOnDate(
@@ -58,6 +64,7 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
           date: _selectedDate,
         );
         intakesMap[med.id] = intakes;
+        debugPrint('[LOAD DATA] Med ${med.name}: ${intakes.length} intakes');
       }
       
       if (!mounted) return;
@@ -68,7 +75,7 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading medications: $e');
+      debugPrint('[LOAD DATA] Error loading medications: $e');
       if (!mounted) return;
       setState(() => _isLoading = false);
     }
@@ -165,6 +172,8 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
               fontSize: 16,
               color: ModernAppColors.mutedText,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -287,57 +296,33 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
     );
   }
 
-  IconData _getIconForType(String? type) {
-    switch (type) {
-      case 'pill':
-        return Icons.medication_rounded;
-      case 'capsule':
-        return Icons.medication_liquid_rounded;
-      case 'bottle':
-        return Icons.local_drink_rounded;
-      case 'vitamin':
-        return Icons.restaurant_rounded;
-      case 'injection':
-        return Icons.vaccines_rounded;
-      case 'drops':
-        return Icons.water_drop_rounded;
-      case 'syrup':
-        return Icons.science_rounded;
-      case 'inhaler':
-        return Icons.air_rounded;
-      default:
-        return Icons.medication_rounded;
-    }
-  }
-
-  Color _getDefaultColor() {
-    return const Color(0xFFFF9F43); // Default orange
-  }
-
   Widget _buildMedicationCard(MedicationFirebase medication, List<MedicationIntake> intakes) {
-    // Calculate total doses from frequency
-    int totalDoses = 0;
-    if (medication.frequency.morning) totalDoses++;
-    if (medication.frequency.afternoon) totalDoses++;
-    if (medication.frequency.evening) totalDoses++;
+    final dateKey = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+    final slots = medication.getTimeSlots();
     
-    final takenDoses = intakes.where((i) => i.taken).length;
-    final progress = totalDoses > 0 ? takenDoses / totalDoses : 0.0;
+    // Create intake map by slot
+    final Map<String, bool> intakeStatus = {};
+    for (final slot in slots) {
+      final intakeKey = '${dateKey}_$slot';
+      final intake = intakes.firstWhere(
+        (i) => i.id == intakeKey || i.period == slot,
+        orElse: () => MedicationIntake(id: '', medicationId: medication.id, date: dateKey, taken: false),
+      );
+      intakeStatus[slot] = intake.taken;
+    }
     
-    final iconData = _getIconForType(medication.type);
-    final cardColor = _getDefaultColor(); // Can be extended to use medication.color if stored
+    final takenCount = intakeStatus.values.where((t) => t).length;
+    final totalCount = slots.length;
+    final progress = totalCount > 0 ? takenCount / totalCount : 0.0;
+    
+    // Use medication's color and icon
+    final medColor = medication.displayColor;
+    final medIcon = medication.displayIcon;
+    
+    debugPrint('[CARD] Med: ${medication.name}, Color: ${medication.color}, Icon: ${medication.icon}');
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MedicationDetailEnhancedScreen(
-              medication: medication,
-            ),
-          ),
-        );
-      },
+      onTap: () => _navigateToEdit(medication),
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(20),
@@ -345,7 +330,7 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
           color: ModernAppColors.cardBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: cardColor.withOpacity(0.3),
+            color: medColor.withOpacity(0.3),
             width: 1,
           ),
         ),
@@ -358,12 +343,12 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: cardColor.withOpacity(0.2),
+                    color: medColor.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    iconData,
-                    color: cardColor,
+                    medIcon,
+                    color: medColor,
                     size: 26,
                   ),
                 ),
@@ -371,6 +356,7 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         medication.name,
@@ -379,102 +365,148 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
                           fontWeight: FontWeight.bold,
                           color: ModernAppColors.lightText,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${medication.dosage} • $totalDoses times/day',
+                        '${medication.dosage} • ${slots.length} times/day',
                         style: const TextStyle(
                           fontSize: 13,
                           color: ModernAppColors.mutedText,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      if (medication.totalAmount != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          '${medication.totalAmount} doses remaining',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cardColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
+                const Icon(
+                  Icons.edit_outlined,
+                  color: ModernAppColors.mutedText,
+                  size: 20,
+                ),
               ],
             ),
-            
-            const SizedBox(height: 15),
-            
-            // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: ModernAppColors.darkBg,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  progress == 1.0 
-                      ? ModernAppColors.accentGreen 
-                      : cardColor,
-                ),
+          
+          const SizedBox(height: 15),
+          
+          // Time slots with checkboxes
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: slots.map((slot) {
+              final isTaken = intakeStatus[slot] ?? false;
+              return _buildSlotChip(medication, slot, isTaken);
+            }).toList(),
+          ),
+          
+          const SizedBox(height: 15),
+          
+          // Progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: ModernAppColors.darkBg,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                progress == 1.0 
+                    ? ModernAppColors.accentGreen 
+                    : medColor,
               ),
             ),
-            
-            const SizedBox(height: 10),
-            
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '$takenDoses of $totalDoses doses taken',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: progress == 1.0 
-                        ? ModernAppColors.accentGreen 
-                        : ModernAppColors.mutedText,
-                  ),
-                ),
-                if (medication.endDate != null)
-                  Text(
-                    'Until ${_formatEndDate(medication.endDate!)}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: ModernAppColors.mutedText,
-                    ),
-                  ),
-              ],
+          ),
+          
+          const SizedBox(height: 10),
+          
+          Text(
+            '$takenCount of $totalCount doses taken',
+            style: TextStyle(
+              fontSize: 12,
+              color: progress == 1.0 
+                  ? ModernAppColors.accentGreen 
+                  : ModernAppColors.mutedText,
+            ),
+          ),
+        ],
+      ),
+      ),
+    );
+  }
+
+  void _navigateToEdit(MedicationFirebase medication) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditMedicationScreen(medication: medication),
+      ),
+    ).then((_) => _loadData());
+  }
+  
+  Widget _buildSlotChip(MedicationFirebase medication, String slot, bool isTaken) {
+    final slotColor = slot == 'morning' ? const Color(0xFFFFD166) : 
+                      slot == 'afternoon' ? const Color(0xFF06D6A0) : 
+                      const Color(0xFF9D84FF);
+    
+    return GestureDetector(
+      onTap: () => _toggleSlotIntake(medication, slot),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isTaken ? slotColor.withOpacity(0.3) : ModernAppColors.darkBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isTaken ? slotColor : ModernAppColors.mutedText.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isTaken ? Icons.check_circle : Icons.circle_outlined,
+              color: isTaken ? slotColor : ModernAppColors.mutedText,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              slot.toUpperCase(),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isTaken ? slotColor : ModernAppColors.mutedText,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
       ),
     );
   }
-
-  String _formatEndDate(String endDateStr) {
+  
+  Future<void> _toggleSlotIntake(MedicationFirebase medication, String slot) async {
     try {
-      final endDate = DateTime.parse(endDateStr);
-      final now = DateTime.now();
-      final difference = endDate.difference(now).inDays;
+      final model = context.read<MedicationModel>();
+      await model.toggleMedicationIntake(
+        medicationId: medication.id,
+        date: _selectedDate,
+        slot: slot,
+      );
       
-      if (difference < 0) {
-        return 'Expired';
-      } else if (difference == 0) {
-        return 'Today';
-      } else if (difference == 1) {
-        return 'Tomorrow';
-      } else if (difference < 7) {
-        return '$difference days';
-      } else if (difference < 30) {
-        final weeks = (difference / 7).ceil();
-        return '$weeks weeks';
-      } else {
-        final months = (difference / 30).ceil();
-        return '$months months';
-      }
+      debugPrint('[TOGGLE] Toggled ${medication.name} $slot on ${_selectedDate}');
+      
+      // Reload data
+      await _loadData();
     } catch (e) {
-      return '';
+      debugPrint('[TOGGLE] Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating medication: $e'),
+          backgroundColor: ModernAppColors.error,
+        ),
+      );
     }
   }
 

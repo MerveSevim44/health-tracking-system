@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/models/mood_model.dart';
 import 'package:health_care/models/water_model.dart';
+import 'package:health_care/models/sleep_model.dart';
 import 'package:health_care/screens/chat.dart';
+import 'package:health_care/screens/sleep_tracking_screen.dart';
+import 'package:health_care/screens/sleep_details_screen.dart';
+import 'package:health_care/services/sleep_service.dart';
 import 'package:health_care/theme/water_theme.dart';
+import 'package:health_care/theme/app_theme.dart';
 import 'package:health_care/utils/page_transitions.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -59,6 +64,11 @@ class MainContent extends StatelessWidget {
 
           // 4. Su Takibi Kartı
           const WaterTrackingCard(),
+
+          const SizedBox(height: 24),
+
+          // 4.5 Sleep Tracking Card
+          const SleepTrackingCard(),
 
           const SizedBox(height: 24),
 
@@ -523,6 +533,280 @@ class WaterTrackingCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// --- Sleep Tracking Card Widget ---
+class SleepTrackingCard extends StatefulWidget {
+  const SleepTrackingCard({super.key});
+
+  @override
+  State<SleepTrackingCard> createState() => _SleepTrackingCardState();
+}
+
+class _SleepTrackingCardState extends State<SleepTrackingCard> {
+  final SleepService _sleepService = SleepService();
+  SleepLog? _todaySleep;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodaySleep();
+  }
+
+  Future<void> _loadTodaySleep() async {
+    try {
+      final sleep = await _sleepService.getTodaySleep();
+      if (mounted) {
+        setState(() {
+          _todaySleep = sleep;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading today\'s sleep: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SleepTrackingScreen()),
+        );
+        if (result == true) {
+          _loadTodaySleep(); // Reload data after logging sleep
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF7B68EE).withOpacity(0.15),
+              const Color(0xFF9D84FF).withOpacity(0.08),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFF7B68EE).withOpacity(0.2),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7B68EE).withOpacity(0.15),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7B68EE).withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.bedtime_rounded,
+                        color: Color(0xFF7B68EE),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Sleep Tracking',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    if (_todaySleep != null)
+                      IconButton(
+                        icon: const Icon(Icons.bar_chart_rounded, size: 20),
+                        color: const Color(0xFF7B68EE),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SleepDetailsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_todaySleep != null) ...[
+              // Sleep data exists
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _buildSleepInfo(
+                      icon: Icons.bedtime_rounded,
+                      label: 'Duration',
+                      value: _todaySleep!.formattedDuration,
+                      color: const Color(0xFF7B68EE),
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildSleepInfo(
+                      icon: Icons.star_rounded,
+                      label: 'Quality',
+                      value: _todaySleep!.qualityLabel,
+                      color: AppColors.warning,
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Bed: ${_todaySleep!.bedTime}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
+                  ),
+                  Text(
+                    'Wake: ${_todaySleep!.wakeTime}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              // No sleep data
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.bedtime_outlined,
+                        size: 48,
+                        color: (isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No sleep logged today',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap to log your sleep',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSleepInfo({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: (isDark ? AppColors.darkCardBg : Colors.white).withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

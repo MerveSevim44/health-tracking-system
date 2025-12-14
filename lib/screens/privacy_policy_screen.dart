@@ -8,20 +8,20 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Gizlilik Politikası',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontSize: 20,
+          style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -37,8 +37,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.pastelLavender,
-                    AppColors.pastelMint,
+                    AppColors.accent.withOpacity(0.2),
+                    AppColors.secondary.withOpacity(0.2),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -55,7 +55,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     child: const Icon(
                       Icons.shield_outlined,
-                      color: AppColors.moodCalm,
+                      color: AppColors.emotionCalm,
                       size: 32,
                     ),
                   ),
@@ -67,7 +67,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                         Text(
                           'Gizliliğiniz Bizim İçin Önemli',
                           style: AppTextStyles.headlineMedium.copyWith(
-                            color: AppColors.textDark,
+                            color: AppColors.lightTextPrimary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -75,7 +75,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                         Text(
                           'Son güncelleme: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
                           style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textMedium,
+                            color: AppColors.lightTextSecondary,
                           ),
                         ),
                       ],
@@ -168,10 +168,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.pastelBlue.withOpacity(0.3),
+                color: AppColors.info.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.moodCalm.withOpacity(0.3),
+                  color: AppColors.emotionCalm.withOpacity(0.3),
                   width: 1,
                 ),
               ),
@@ -182,7 +182,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.info_outline,
-                        color: AppColors.moodCalm,
+                        color: AppColors.emotionCalm,
                         size: 24,
                       ),
                       const SizedBox(width: 12),
@@ -198,14 +198,14 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   Text(
                     'Gizlilik politikası ile ilgili sorularınız için bizimle iletişime geçebilirsiniz:',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textMedium,
+                      color: AppColors.lightTextSecondary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'E-posta: gizlilik@healthtracking.com',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.moodCalm,
+                      color: AppColors.emotionCalm,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -226,11 +226,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: AppColors.lightCardBg,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textLight.withOpacity(0.1),
+            color: AppColors.lightTextTertiary.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -250,7 +250,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           Text(
             content,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textMedium,
+              color: AppColors.lightTextSecondary,
               height: 1.6,
             ),
           ),

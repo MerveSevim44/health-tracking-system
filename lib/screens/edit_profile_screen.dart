@@ -2,17 +2,16 @@
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../theme/app_theme.dart';
 
 // 🎨 EDIT PROFILE SCREEN RENK PALETİ (Light Pastel Theme)
 class EditProfileColors {
-  static const Color background = AppColors.background; // Color(0xFFFBFBFB)
-  static const Color cardBackground = AppColors.cardBackground; // Colors.white
-  static const Color primaryGreen = AppColors.moodCalm; // Color(0xFF06D6A0)
-  static const Color textDark = AppColors.textDark; // Color(0xFF2D3436)
-  static const Color textMedium = AppColors.textMedium; // Color(0xFF636E72)
-  static const Color textLight = AppColors.textLight; // Color(0xFFB2BEC3)
-  static const Color errorRed = AppColors.moodAnxious; // Color(0xFFEF476F)
+  static const Color background = Color(0xFFFBFBFB);
+  static const Color cardBackground = Colors.white;
+  static const Color primaryGreen = Color(0xFF06D6A0);
+  static const Color textDark = Color(0xFF2D3436);
+  static const Color textMedium = Color(0xFF636E72);
+  static const Color textLight = Color(0xFFB2BEC3);
+  static const Color errorRed = Color(0xFFEF476F);
 }
 
 class EditProfileScreen extends StatefulWidget {

@@ -2,8 +2,10 @@
 // Gemini AI integration for health coaching
 
 import 'dart:async';
+import 'dart:math';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import '../models/mood_firebase_model.dart';
 import '../models/medication_firebase_model.dart';
 
@@ -14,11 +16,52 @@ class GeminiService {
   
   late final GenerativeModel _model;
   final List<Content> _conversationHistory = [];
+  final Random _random = Random();
+  
+  // 🛡️ Fallback messages - Turkish motivational messages
+  static const List<String> _fallbackMessages = [
+    'Bugün kendine küçük bir iyilik yapmayı unutma 🌿',
+    'Her gün yeni bir başlangıç, bugün de senin günün 💫',
+    'Kendine karşı nazik ol, bugün de elinden geleni yaptın 🌱',
+    'Küçük adımlar büyük değişimler getirir, devam et ✨',
+    'Bugün de sağlıklı seçimler yapmak için harika bir gün 🌟',
+    'Nefes al, rahatla, şu an tam olarak olman gereken yerde olabilirsin 💙',
+    'Her gün biraz daha iyi olmak için bir fırsat, bugünü değerlendir 🌸',
+    'Kendine iyi bakmak en önemli yatırım, bugün de kendine zaman ayır 💜',
+  ];
+  
+  // Cache for daily fallback messages
+  String? _cachedFallbackMessage;
+  DateTime? _cachedFallbackDate;
+  
+  /// Get a random fallback message (cached per day)
+  String _getFallbackMessage() {
+    final today = DateTime.now();
+    final todayKey = DateTime(today.year, today.month, today.day);
+    
+    // Return cached message if it's from today
+    if (_cachedFallbackMessage != null && 
+        _cachedFallbackDate != null &&
+        _cachedFallbackDate!.year == todayKey.year &&
+        _cachedFallbackDate!.month == todayKey.month &&
+        _cachedFallbackDate!.day == todayKey.day) {
+      return _cachedFallbackMessage!;
+    }
+    
+    // Get new random fallback message
+    final message = _fallbackMessages[_random.nextInt(_fallbackMessages.length)];
+    _cachedFallbackMessage = message;
+    _cachedFallbackDate = todayKey;
+    
+    return message;
+  }
 
   GeminiService() {
+    // ✅ CORRECT: Using gemini-2.5-flash (gemini-pro is deprecated)
+    // Endpoint: https://generativelanguage.googleapis.com/v1beta/
     _model = GenerativeModel(
-      model: 'gemini-2.0-flash',
-      apiKey: _apiKey,
+      model: 'gemini-2.5-flash',
+      apiKey: _apiKey.isEmpty ? 'AIzaSyBnpsgc7zFxt9Svi4vpVtnS7u0w7bgquew' : _apiKey,
       generationConfig: GenerationConfig(
         temperature: 0.9,
         topK: 40,
@@ -89,75 +132,58 @@ class GeminiService {
 
   /// Send a message and get AI response with retry logic
   Future<String> sendMessage(String userMessage) async {
-    return _executeWithRetry(() async {
-      // Add user message to history
-      _conversationHistory.add(Content.text(userMessage));
+    try {
+      return await _executeWithRetry(() async {
+        // Add user message to history
+        _conversationHistory.add(Content.text(userMessage));
 
-      // Start chat with history
-      final chat = _model.startChat(history: _conversationHistory);
+        // Start chat with history
+        final chat = _model.startChat(history: _conversationHistory);
+        
+        // Get response
+        final response = await chat.sendMessage(Content.text(userMessage));
+        final aiResponse = response.text?.trim();
+        
+        if (aiResponse != null && aiResponse.isNotEmpty) {
+          // Add AI response to history
+          _conversationHistory.add(Content.model([TextPart(aiResponse)]));
+          return aiResponse;
+        }
+        
+        // Empty response fallback
+        return _getFallbackMessage();
+      });
+    } catch (e) {
+      // 🛡️ Silent error logging - no technical details exposed to user
+      debugPrint('❌ [Gemini Service] API Error (silent fallback): ${e.runtimeType}');
       
-      // Get response
-      final response = await chat.sendMessage(Content.text(userMessage));
-      final aiResponse = response.text ?? 'I\'m here to help! Could you tell me more?';
-
-      // Add AI response to history
-      _conversationHistory.add(Content.model([TextPart(aiResponse)]));
-
-      return aiResponse;
-    });
+      // Return friendly fallback message instead of error
+      return _getFallbackMessage();
+    }
   }
 
-  /// Execute API call with retry logic for rate limits
-  Future<String> _executeWithRetry(Future<String> Function() apiCall, {int maxRetries = 2}) async {
-    int retryCount = 0;
-    
-    while (retryCount <= maxRetries) {
-      try {
-        return await apiCall();
-      } catch (e) {
-        final errorString = e.toString();
-        print('❌ Gemini API Error: $e');
-        
-        // Check for API key error
-        if (errorString.contains('API_KEY') || errorString.contains('API key')) {
-          return 'Please configure your Gemini API key in the .env file to enable AI chat.';
-        }
-        
-        // Check for rate limit / quota exceeded
-        if (errorString.contains('429') || 
-            errorString.contains('quota') || 
-            errorString.contains('rate limit') ||
-            errorString.contains('Too Many Requests')) {
-          
-          // Extract retry time if available
-          int retrySeconds = 60; // Default 60 seconds
-          final retryMatch = RegExp(r'retry in (\d+\.?\d*)s', caseSensitive: false).firstMatch(errorString);
-          if (retryMatch != null) {
-            retrySeconds = (double.parse(retryMatch.group(1)!)).ceil();
-          }
-          
-          if (retryCount < maxRetries) {
-            print('⏳ Rate limit hit. Retrying in ${retrySeconds}s... (attempt ${retryCount + 1}/${maxRetries + 1})');
-            await Future.delayed(Duration(seconds: retrySeconds));
-            retryCount++;
-            continue;
-          } else {
-            return 'I\'ve reached my rate limit for now. Please wait a minute and try again. You can check your usage at https://ai.dev/usage 😊';
-          }
-        }
-        
-        // For other errors, return friendly message
-        if (retryCount < maxRetries) {
-          await Future.delayed(Duration(seconds: 2 * (retryCount + 1))); // Exponential backoff
-          retryCount++;
-          continue;
-        }
-        
-        return 'I\'m having trouble connecting right now. Please try again in a moment. 😊';
+  /// Execute API call with fallback mechanism
+  /// 🛡️ Returns fallback message instead of error messages (no retries)
+  Future<String> _executeWithRetry(Future<String> Function() apiCall) async {
+    // Do NOT retry immediately - return fallback on first error
+    // This prevents quota exhaustion and provides instant user feedback
+    try {
+      return await apiCall();
+    } catch (e) {
+      final errorString = e.toString();
+      
+      // 🛡️ Silent error logging - no technical details exposed to user
+      debugPrint('❌ [Gemini Service] API Error (silent fallback): ${e.runtimeType}');
+      
+      // Check for API key error (only case where we show a different message)
+      if (errorString.contains('API_KEY') || errorString.contains('API key')) {
+        return _getFallbackMessage(); // Still use fallback, don't expose technical details
       }
+      
+      // For ALL other errors (quota, network, timeout, etc.), return fallback
+      // Do NOT retry, do NOT show error messages
+      return _getFallbackMessage();
     }
-    
-    return 'I\'m having trouble connecting right now. Please try again in a moment. 😊';
   }
 
   /// Generate welcome message
@@ -165,12 +191,17 @@ class GeminiService {
     final name = username ?? 'there';
     final prompt = 'Generate a warm, friendly greeting for $name as their health coach. Keep it short (1-2 sentences) and welcoming.';
     
-    return _executeWithRetry(() async {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      return response.text ?? 'Hello $name! How are you feeling today? 👋';
-    }, maxRetries: 1).catchError((e) {
-      return 'Hello $name! How are you feeling today? 👋';
-    });
+    try {
+      return await _executeWithRetry(() async {
+        final response = await _model.generateContent([Content.text(prompt)]);
+        final aiResponse = response.text?.trim();
+        return aiResponse ?? _getFallbackMessage();
+      });
+    } catch (e) {
+      // 🛡️ Silent error logging
+      debugPrint('❌ [Gemini Service] Welcome message error (silent fallback): ${e.runtimeType}');
+      return _getFallbackMessage();
+    }
   }
 
   /// Generate mood-based response
@@ -190,24 +221,34 @@ class GeminiService {
     - Encourages them
     ''';
     
-    return _executeWithRetry(() async {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      return response.text ?? _getFallbackMoodResponse(moodLevel);
-    }, maxRetries: 1).catchError((e) {
+    try {
+      return await _executeWithRetry(() async {
+        final response = await _model.generateContent([Content.text(prompt)]);
+        final aiResponse = response.text?.trim();
+        return aiResponse ?? _getFallbackMoodResponse(moodLevel);
+      });
+    } catch (e) {
+      // 🛡️ Silent error logging
+      debugPrint('❌ [Gemini Service] Mood response error (silent fallback): ${e.runtimeType}');
       return _getFallbackMoodResponse(moodLevel);
-    });
+    }
   }
 
   /// Generate daily health tip
   Future<String> generateDailyTip() async {
     final prompt = 'Give a short, actionable health tip about hydration, mood, or wellness. Keep it to 1 sentence with an emoji.';
     
-    return _executeWithRetry(() async {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      return response.text ?? '💧 Remember to stay hydrated throughout the day!';
-    }, maxRetries: 1).catchError((e) {
-      return '💧 Remember to stay hydrated throughout the day!';
-    });
+    try {
+      return await _executeWithRetry(() async {
+        final response = await _model.generateContent([Content.text(prompt)]);
+        final aiResponse = response.text?.trim();
+        return aiResponse ?? _getFallbackMessage();
+      });
+    } catch (e) {
+      // 🛡️ Silent error logging
+      debugPrint('❌ [Gemini Service] Daily tip error (silent fallback): ${e.runtimeType}');
+      return _getFallbackMessage();
+    }
   }
 
   /// Get personalized health insights
@@ -237,12 +278,17 @@ class GeminiService {
     Provide a brief, encouraging health insight or suggestion (2 sentences max).
     ''';
     
-    return _executeWithRetry(() async {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      return response.text ?? 'Keep up the great work on your health journey! 🌟';
-    }, maxRetries: 1).catchError((e) {
-      return 'Keep up the great work on your health journey! 🌟';
-    });
+    try {
+      return await _executeWithRetry(() async {
+        final response = await _model.generateContent([Content.text(prompt)]);
+        final aiResponse = response.text?.trim();
+        return aiResponse ?? _getFallbackMessage();
+      });
+    } catch (e) {
+      // 🛡️ Silent error logging
+      debugPrint('❌ [Gemini Service] Health insight error (silent fallback): ${e.runtimeType}');
+      return _getFallbackMessage();
+    }
   }
 
   /// Clear conversation history
@@ -250,14 +296,14 @@ class GeminiService {
     _conversationHistory.clear();
   }
 
-  // Fallback responses when API fails
+  // Fallback responses when API fails - contextual based on mood
   String _getFallbackMoodResponse(int moodLevel) {
     if (moodLevel >= 4) {
-      return 'That\'s wonderful! Keep up that positive energy! ✨';
+      return 'Harika hissediyorsun! Bu pozitif enerjini korumaya devam et 🌟';
     } else if (moodLevel == 3) {
-      return 'A neutral day is okay. Small steps toward wellness count! 🌱';
+      return 'Bugün normal bir gün. Kendine iyi bak 💙';
     } else {
-      return 'I hear you. Remember to be kind to yourself today. 💙';
+      return 'Bugün biraz zorlanıyorsun gibi. Benimle konuşmak istersen buradayım 💜';
     }
   }
 }

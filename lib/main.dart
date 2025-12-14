@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-// 🔥 GEREKLİ: Firebase Auth durumu kontrolü için
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ------------------------------------
 // MODEL/STATE MANAGEMENT IMPORTS
@@ -13,6 +10,7 @@ import 'models/mood_model.dart';
 import 'models/water_model.dart';
 import 'models/medication_model.dart';
 import 'providers/drink_provider.dart';
+import 'providers/theme_provider.dart';
 
 // ------------------------------------
 // TEMA VE DİĞER WIDGET IMPORTS
@@ -29,6 +27,7 @@ import 'package:health_care/screens/first_screen.dart'; // 🔥 GİRİŞ YAPILMA
 import 'package:health_care/screens/login_screen.dart';
 import 'package:health_care/screens/register_screen.dart';
 import 'package:health_care/screens/auth_wrapper.dart'; // 🔥 Login sonrası mood kontrolü
+import 'package:health_care/screens/mood_checkin_screen.dart'; // 🔥 Günlük mood kontrolü
 import 'package:health_care/screens/pastel_home_navigation.dart'; // 🔥 GİRİŞ YAPILDIYSA GÖRÜNÜR
 import 'package:health_care/screens/breathing_exercise_screen.dart';
 import 'package:health_care/screens/water/water_home_screen.dart';
@@ -37,25 +36,34 @@ import 'package:health_care/screens/water/water_success_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
 import 'package:health_care/screens/medication/medication_detail_screen.dart';
 import 'package:health_care/screens/medication/medication_add_screen.dart';
+import 'package:health_care/screens/sleep_tracking_screen.dart'; // Sleep tracking
+import 'package:health_care/screens/sleep_details_screen.dart'; // Sleep details
 import 'package:health_care/screens/settings_screen.dart'; // Yeni eklendi
 import 'package:health_care/screens/help_center_screen.dart'; // Yeni eklendi
 import 'package:health_care/screens/privacy_policy_screen.dart'; // Yeni eklendi
+import 'package:health_care/services/notification_service.dart'; // 🔥 NOTIFICATION SERVICE
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
 
   // Firebase başlatma
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 🔔 Initialize notification service
+  try {
+    await NotificationService().initialize();
+    debugPrint('✅ Notification service initialized');
+  } catch (e) {
+    debugPrint('❌ Notification service initialization failed: $e');
+  }
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => MoodModel()),
         ChangeNotifierProvider(create: (_) => WaterModel()),
         ChangeNotifierProvider(create: (_) => MedicationModel()),
@@ -94,6 +102,12 @@ class MyApp extends StatelessWidget {
         break;
 
     // ANA ROTA VE ÖZELLİK ROTALARI
+      case '/auth-wrapper':
+        page = const AuthWrapper(); // Login sonrası mood kontrolü
+        break;
+      case '/mood-checkin':
+        page = const MoodCheckinScreen(); // Günlük mood kontrolü
+        break;
       case '/home':
         page = const PastelHomeNavigation();
         break;
@@ -132,6 +146,15 @@ class MyApp extends StatelessWidget {
         page = const MedicationAddScreen();
         break;
 
+    // Sleep Tracking Routes
+      case '/sleep':
+      case '/sleep-tracking':
+        page = const SleepTrackingScreen();
+        break;
+      case '/sleep-details':
+        page = const SleepDetailsScreen();
+        break;
+
     // Settings Routes (Yeni eklendi)
       case '/settings':
         page = const SettingsScreen();
@@ -167,6 +190,14 @@ class MyApp extends StatelessWidget {
       case '/register':
         return PageTransitions.fadeSlideTransition(page, settings: settings);
       
+      // Auth wrapper için fade geçiş
+      case '/auth-wrapper':
+        return PageTransitions.fadeTransition(page, settings: settings);
+      
+      // Mood check-in için fade geçiş
+      case '/mood-checkin':
+        return PageTransitions.fadeSlideTransition(page, settings: settings);
+      
       // Home'a geçişte etkileyici scale+fade
       case '/home':
         return PageTransitions.zoomTransition(page, settings: settings);
@@ -188,15 +219,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Health Tracking System',
-      debugShowCheckedModeBanner: false,
-      theme: pastelAppTheme,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'MINOA – Your Health Companion',
+          debugShowCheckedModeBanner: false,
+          
+          // Theme configuration
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeProvider.themeMode,
 
-      // Always show splash screen first
-      home: const SplashScreen(),
+          // Always show splash screen first
+          home: const SplashScreen(),
 
-      onGenerateRoute: _onGenerateRoute,
+          onGenerateRoute: _onGenerateRoute,
+        );
+      },
     );
   }
 }

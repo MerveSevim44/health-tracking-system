@@ -146,8 +146,14 @@ class _MedicationAddScreenState extends State<MedicationAddScreen> with SingleTi
         ),
         type: _selectedIcon,
         totalAmount: totalAmount,
+        remainingAmount: totalAmount,
         endDate: endDate,
+        color: '#${_selectedColor.value.toRadixString(16).substring(2).toUpperCase()}',
+        icon: _selectedIcon,
+        daysOfWeek: _selectedDays.toList(),
       );
+      
+      debugPrint('[ADD MED] Saving medication with color: #${_selectedColor.value.toRadixString(16).substring(2)} icon: $_selectedIcon days: ${_selectedDays.toList()}');
 
       await medicationModel.addMedicationEnhanced(medication);
 
@@ -504,20 +510,30 @@ class _MedicationAddScreenState extends State<MedicationAddScreen> with SingleTi
             maxLines: maxLines,
             keyboardType: keyboardType,
             style: const TextStyle(
-              color: ModernAppColors.lightText,
-              fontSize: 16,
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              decoration: TextDecoration.none,
             ),
+            cursorColor: Colors.white,
+            cursorWidth: 2,
             decoration: InputDecoration(
+              filled: true,
+              fillColor: ModernAppColors.cardBg.withOpacity(0.6),
               hintText: hint,
               hintStyle: const TextStyle(
-                color: ModernAppColors.mutedText,
+                color: Colors.white60,
+                fontSize: 16,
+                fontWeight: FontWeight.normal,
               ),
               prefixIcon: Icon(
                 icon,
-                color: _selectedColor,
+                color: Colors.white,
                 size: 22,
               ),
               border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 20,
                 vertical: 18,

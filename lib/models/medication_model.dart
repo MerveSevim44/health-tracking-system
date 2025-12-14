@@ -219,8 +219,12 @@ class MedicationModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateMedication(Medication medication) async {
-    await _service.updateMedication(medication.toFirebase());
+  Future<void> updateMedication(dynamic medication) async {
+    if (medication is MedicationFirebase) {
+      await _service.updateMedication(medication);
+    } else if (medication is Medication) {
+      await _service.updateMedication(medication.toFirebase());
+    }
     notifyListeners();
   }
 
@@ -323,6 +327,23 @@ class MedicationModel extends ChangeNotifier {
       intakeId: intakeId,
       taken: taken,
       notes: notes,
+    );
+    
+    // Reload intakes for current date
+    await _loadIntakesForSelectedDate();
+    notifyListeners();
+  }
+  
+  /// Toggle medication intake for a specific slot
+  Future<void> toggleMedicationIntake({
+    required String medicationId,
+    required DateTime date,
+    required String slot,
+  }) async {
+    await _service.toggleIntake(
+      medicationId: medicationId,
+      date: date,
+      slot: slot,
     );
     
     // Reload intakes for current date

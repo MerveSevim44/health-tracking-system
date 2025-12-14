@@ -61,6 +61,7 @@ class MedicationCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     medication.name,
@@ -69,6 +70,8 @@ class MedicationCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF2D3436),
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
                   // Dosage with icon

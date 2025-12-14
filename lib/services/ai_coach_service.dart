@@ -1,10 +1,20 @@
 // 📁 lib/services/ai_coach_service.dart
-// Rule-based AI message generation service
+// Gemini AI integration service for personalized health coaching
+//
+// 🛡️ FALLBACK MECHANISM:
+// - ALL Gemini API calls are wrapped in try-catch with fallback messages
+// - If API fails (quota, network, timeout), returns friendly Turkish fallback message
+// - Daily failure cache: if API fails once today, subsequent calls skip API and use fallback
+// - Never shows error messages to users - always returns a warm, motivating message
+// - Fallback messages are cached per day for consistency
 
+import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/chat_models.dart';
 import '../models/mood_firebase_model.dart';
 import '../models/medication_firebase_model.dart';
@@ -20,6 +30,128 @@ class AiCoachService {
   String? get _userId => _auth.currentUser?.uid;
 
   final Random _random = Random();
+  
+  // 🔑 Gemini AI Model (Google AI Studio - Using API Key, NOT Vertex AI)
+  late final GenerativeModel _model;
+  
+  // 🛡️ Fallback messages - Turkish motivational messages
+  static const List<String> _fallbackMessages = [
+    'Bugün kendine küçük bir iyilik yapmayı unutma 🌿',
+    'Her gün yeni bir başlangıç, bugün de senin günün 💫',
+    'Kendine karşı nazik ol, bugün de elinden geleni yaptın 🌱',
+    'Küçük adımlar büyük değişimler getirir, devam et ✨',
+    'Bugün de sağlıklı seçimler yapmak için harika bir gün 🌟',
+    'Nefes al, rahatla, şu an tam olarak olman gereken yerde olabilirsin 💙',
+    'Her gün biraz daha iyi olmak için bir fırsat, bugünü değerlendir 🌸',
+    'Kendine iyi bakmak en önemli yatırım, bugün de kendine zaman ayır 💜',
+  ];
+  
+  // Cache for daily fallback messages (prevents multiple API calls on same day if one fails)
+  String? _cachedFallbackMessage;
+  DateTime? _cachedFallbackDate;
+  
+  // Daily failure cache - if API failed today, use fallback immediately for subsequent calls
+  bool _apiFailedToday = false;
+  DateTime? _lastFailureDate;
+  
+  AiCoachService() {
+    // ✅ CORRECT: Using gemini-2.5-flash (gemini-pro is deprecated)
+    // Endpoint: https://generativelanguage.googleapis.com/v1beta/
+    _model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: 'AIzaSyBnpsgc7zFxt9Svi4vpVtnS7u0w7bgquew',
+    );
+  }
+  
+  /// Check if API failed today - if so, skip API call and use fallback immediately
+  bool _shouldSkipApiCall() {
+    final today = DateTime.now();
+    final todayKey = DateTime(today.year, today.month, today.day);
+    
+    // Reset failure flag if it's a new day
+    if (_lastFailureDate != null) {
+      final lastFailureKey = DateTime(
+        _lastFailureDate!.year,
+        _lastFailureDate!.month,
+        _lastFailureDate!.day,
+      );
+      
+      if (lastFailureKey.year != todayKey.year ||
+          lastFailureKey.month != todayKey.month ||
+          lastFailureKey.day != todayKey.day) {
+        _apiFailedToday = false;
+        _lastFailureDate = null;
+      }
+    }
+    
+    return _apiFailedToday;
+  }
+  
+  /// Mark API as failed for today
+  void _markApiFailed() {
+    _apiFailedToday = true;
+    _lastFailureDate = DateTime.now();
+    debugPrint('🛡️ [AI Coach] API marked as failed for today - using fallback for subsequent calls');
+  }
+  
+  /// Get a random fallback message (cached per day)
+  String _getFallbackMessage() {
+    final today = DateTime.now();
+    final todayKey = DateTime(today.year, today.month, today.day);
+    
+    // Return cached message if it's from today
+    if (_cachedFallbackMessage != null && 
+        _cachedFallbackDate != null &&
+        _cachedFallbackDate!.year == todayKey.year &&
+        _cachedFallbackDate!.month == todayKey.month &&
+        _cachedFallbackDate!.day == todayKey.day) {
+      return _cachedFallbackMessage!;
+    }
+    
+    // Get new random fallback message
+    final message = _fallbackMessages[_random.nextInt(_fallbackMessages.length)];
+    _cachedFallbackMessage = message;
+    _cachedFallbackDate = todayKey;
+    
+    return message;
+  }
+  
+  /// Execute Gemini API call with comprehensive error handling and fallback
+  Future<String> _executeGeminiCall(Future<String> Function() apiCall) async {
+    // If API already failed today, skip call and return fallback immediately
+    if (_shouldSkipApiCall()) {
+      debugPrint('🛡️ [AI Coach] Skipping API call - already failed today, using cached fallback');
+      return _getFallbackMessage();
+    }
+    
+    try {
+      // Add timeout to prevent hanging
+      final response = await apiCall().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          debugPrint('⏱️ [AI Coach] API call timeout - using fallback');
+          throw TimeoutException('API call timeout');
+        },
+      );
+      
+      // If we got here, API call succeeded - reset failure flag
+      _apiFailedToday = false;
+      return response;
+    } on TimeoutException {
+      // Timeout - mark as failed and return fallback
+      _markApiFailed();
+      return _getFallbackMessage();
+    } catch (e) {
+      // 🛡️ Silent error logging - no technical details exposed to user
+      debugPrint('❌ [AI Coach] Gemini API Error (silent fallback): ${e.runtimeType}');
+      
+      // Mark API as failed for today
+      _markApiFailed();
+      
+      // Return friendly fallback message instead of error
+      return _getFallbackMessage();
+    }
+  }
 
   /// Get AI Coach settings for user
   Future<AiCoachSettings> getSettings() async {
@@ -34,7 +166,7 @@ class AiCoachService {
       // Return default settings
       return const AiCoachSettings();
     } catch (e) {
-      print('❌ Error getting AI Coach settings: $e');
+      debugPrint('❌ Error getting AI Coach settings: $e');
       return const AiCoachSettings();
     }
   }
@@ -45,9 +177,9 @@ class AiCoachService {
 
     try {
       await _dbRef.child('users/$_userId/aiCoach').set(settings.toJson());
-      print('✅ AI Coach settings updated');
+      debugPrint('✅ AI Coach settings updated');
     } catch (e) {
-      print('❌ Error updating AI Coach settings: $e');
+      debugPrint('❌ Error updating AI Coach settings: $e');
       rethrow;
     }
   }
@@ -89,54 +221,82 @@ class AiCoachService {
     return greetings[_random.nextInt(greetings.length)];
   }
 
-  /// Generate response to mood submission
-  String generateMoodResponse({
+  /// Generate response to mood submission using Gemini AI
+  Future<String> generateMoodResponse({
     required int moodLevel,
     required List<String> emotions,
-  }) {
-    if (moodLevel >= 4) {
-      // Happy/Great mood
-      final responses = [
-        'Harika! Bugün pozitif enerjinle güzel şeyler yaratacaksın! ✨',
-        'Muhteşem! Bu güzel enerjiyi korumaya devam et 🌟',
-        'Ne güzel! Bugün senin günün gibi görünüyor 🎉',
-        'Harika hissediyorsun! Bu enerjini korumak için su içmeyi unutma 💧',
-      ];
-      return responses[_random.nextInt(responses.length)];
-    } else if (moodLevel == 3) {
-      // Neutral mood
-      final responses = [
-        'Anladım, bugün normal bir gün. Küçük bir yürüyüş seni iyi hissettirebilir 🚶‍♀️',
-        'Normal bir gün. Kendine iyi bak, su içmeyi unutma 💙',
-        'Bugün standart bir mod. İstersen kısa bir meditasyon deneyelim? 🧘‍♀️',
-        'Bugün böyle günlerden. Bir müzik dinlemek ister misin? 🎵',
-      ];
-      return responses[_random.nextInt(responses.length)];
-    } else {
-      // Low/Bad mood
-      if (emotions.contains('anxious') || emotions.contains('stressed')) {
-        final responses = [
-          'Biraz gergin görünüyorsun. Derin nefes almayı dene: 4 san içe, 4 san tut, 4 san dışarı 🌿',
-          'Stresli hissediyorsun. Biraz su iç ve 5 dakika göz dinlendirmesi yap 💚',
-          'Kaygılı hissediyorsun. Küçük bir mola seni rahatlatabilir ☕',
-        ];
-        return responses[_random.nextInt(responses.length)];
-      } else if (emotions.contains('sad')) {
-        final responses = [
-          'Üzgün görünüyorsun. Benimle konuşmak istersen buradayım 💙',
-          'Bugün zor bir gün gibi. Kendine nazik ol, yavaşça ilerle 🌸',
-          'Üzgün hissediyorsun. Sevdiğin bir şey yapmak seni rahatlatabilir 🎨',
-        ];
-        return responses[_random.nextInt(responses.length)];
-      } else {
-        final responses = [
-          'Bugün biraz zorlanıyorsun gibi. Kendine iyi bak 💜',
-          'Zor bir gün. Küçük adımlarla ilerle, acelesi yok 🌱',
-          'Bugün biraz ağır hissediyorsun. Su içmeyi ve dinlenmeyi unutma 💧',
-        ];
-        return responses[_random.nextInt(responses.length)];
+  }) async {
+    return _executeGeminiCall(() async {
+      final moodLabels = {
+        5: 'harika',
+        4: 'iyi',
+        3: 'normal',
+        2: 'kötü',
+        1: 'çok kötü'
+      };
+      
+      final emotionsText = emotions.isEmpty 
+          ? 'belirtilmedi' 
+          : emotions.map((e) => _emotionTranslations[e] ?? e).join(', ');
+      
+      final prompt = '''
+Sen empatik ve destekleyici bir sağlık koçusun. Adın "AI Health Coach". Kullanıcı bugün kendini şöyle hissediyor:
+
+- Ruh hali seviyesi: $moodLevel/5 (${moodLabels[moodLevel]})
+- Hissettiği duygular: $emotionsText
+
+Görevin:
+1. Kullanıcının duygularını anlayıp empati kur
+2. Duygularını onaylayan samimi bir yanıt ver
+3. Küçük, uygulanabilir bir tavsiye sun (nefes egzersizi, kısa yürüyüş, su içme vb.)
+4. Pozitif ve cesaretlendirici ol
+5. Türkçe yanıtla
+6. Maksimum 100 kelime
+7. Emoji kullan (ama abartma, 1-2 tane yeterli)
+
+Dikkat: Çok genel veya yapay cevaplar verme. Kullanıcının seçtiği duyguları mutlaka yanıtına dahil et.
+''';
+
+      final response = await _model.generateContent([Content.text(prompt)]);
+      
+      final aiResponse = response.text?.trim();
+      if (aiResponse != null && aiResponse.isNotEmpty) {
+        return aiResponse;
       }
+      
+      // Empty response - return contextual fallback
+      return _getFallbackMoodResponse(moodLevel, emotions);
+    }).catchError((e) {
+      // Additional safety net - return contextual fallback
+      return _getFallbackMoodResponse(moodLevel, emotions);
+    });
+  }
+  
+  /// Emotion translations for Turkish prompts
+  final Map<String, String> _emotionTranslations = {
+    'happy': 'mutlu',
+    'sad': 'üzgün',
+    'angry': 'sinirli',
+    'calm': 'sakin',
+    'anxious': 'kaygılı',
+    'tired': 'yorgun',
+    'energetic': 'enerjik',
+    'excited': 'heyecanlı',
+  };
+  
+  /// Fallback response when AI fails - contextual based on mood
+  String _getFallbackMoodResponse(int moodLevel, List<String> emotions) {
+    // Use contextual fallback if mood is provided, otherwise use general fallback
+    if (moodLevel >= 4) {
+      return 'Harika hissediyorsun! Bu pozitif enerjini korumaya devam et 🌟';
+    } else if (moodLevel == 3) {
+      return 'Bugün normal bir gün. Kendine iyi bak 💙';
+    } else if (moodLevel <= 2) {
+      return 'Bugün biraz zorlanıyorsun gibi. Benimle konuşmak istersen buradayım 💜';
     }
+    
+    // General fallback if mood level is unknown
+    return _getFallbackMessage();
   }
 
   /// Generate daily tip message
@@ -154,6 +314,40 @@ class AiCoachService {
       '🌱 Küçük başarıları kutlamak motivasyon sağlar',
     ];
     return tips[_random.nextInt(tips.length)];
+  }
+  
+  /// Generate chat response using Gemini AI
+  Future<String> generateChatResponse(String userMessage) async {
+    return _executeGeminiCall(() async {
+      final prompt = '''
+Sen empatik bir sağlık koçu asistanısın. Adın "AI Health Coach". 
+
+Kullanıcının mesajı: "$userMessage"
+
+Görevin:
+1. Kullanıcının sorusuna veya mesajına uygun, yardımcı bir yanıt ver
+2. Eğer sağlık, ruh hali, su, egzersiz, ilaç ile ilgiliyse profesyonel tavsiye ver
+3. Samimi ve destekleyici ol
+4. Kısa ve net cevap ver (maksimum 120 kelime)
+5. Türkçe yanıtla
+6. 1-2 emoji kullan
+
+Önemli: Tıbbi teşhis koyma, sadece genel sağlık tavsiyeleri ver.
+''';
+
+      final response = await _model.generateContent([Content.text(prompt)]);
+      
+      final aiResponse = response.text?.trim();
+      if (aiResponse != null && aiResponse.isNotEmpty) {
+        return aiResponse;
+      }
+      
+      // Empty response fallback
+      return _getFallbackMessage();
+    }).catchError((e) {
+      // Additional safety net
+      return _getFallbackMessage();
+    });
   }
 
   // ==================== PRIVATE HELPERS ====================

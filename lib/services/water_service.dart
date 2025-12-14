@@ -4,8 +4,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:health_care/models/water_firebase_model.dart';
 import 'package:health_care/models/drink_log_model.dart';
+import 'package:health_care/services/notification_service.dart';
 
 class WaterService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -40,6 +42,15 @@ class WaterService {
 
     final ref = _waterLogsRef().push();
     await ref.set(log.toJson());
+    
+    // 🔔 Reschedule water reminders after logging water
+    try {
+      await NotificationService().scheduleWaterReminders();
+      debugPrint('✅ [WaterService] Water reminders rescheduled after logging');
+    } catch (e) {
+      debugPrint('⚠️ [WaterService] Failed to reschedule water reminders: $e');
+    }
+    
     return ref.key!;
   }
 

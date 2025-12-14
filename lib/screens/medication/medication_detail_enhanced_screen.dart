@@ -266,6 +266,7 @@ class _MedicationDetailEnhancedScreenState extends State<MedicationDetailEnhance
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       widget.medication.name,
@@ -274,6 +275,8 @@ class _MedicationDetailEnhancedScreenState extends State<MedicationDetailEnhance
                         fontWeight: FontWeight.bold,
                         color: ModernAppColors.lightText,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -283,6 +286,8 @@ class _MedicationDetailEnhancedScreenState extends State<MedicationDetailEnhance
                         color: color,
                         fontWeight: FontWeight.w600,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -313,6 +318,8 @@ class _MedicationDetailEnhancedScreenState extends State<MedicationDetailEnhance
                         fontSize: 14,
                         color: ModernAppColors.lightText,
                       ),
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

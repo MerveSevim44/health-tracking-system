@@ -183,6 +183,7 @@ class TodayDrinkLogs extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       log.drinkName,
@@ -190,6 +191,8 @@ class TodayDrinkLogs extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: WaterColors.textDark,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -197,6 +200,8 @@ class TodayDrinkLogs extends StatelessWidget {
                       style: WaterTextStyles.labelSmall.copyWith(
                         color: WaterColors.textLight,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

@@ -56,7 +56,11 @@ class MedicationFirebase {
   final MedicationFrequency frequency;
   final String? type; // Medication type (tablet, syrup, etc.)
   final int? totalAmount; // Total amount of medication (pills, ml, etc.)
+  final int? remainingAmount; // Remaining amount
   final String? endDate; // Calculated or manual end date
+  final String? color; // Hex color like "#FF9F43"
+  final String? icon; // Icon key like "pill", "syrup", etc.
+  final List<int>? daysOfWeek; // Days of week (1=Mon to 7=Sun)
 
   const MedicationFirebase({
     required this.id,
@@ -68,7 +72,11 @@ class MedicationFirebase {
     required this.frequency,
     this.type,
     this.totalAmount,
+    this.remainingAmount,
     this.endDate,
+    this.color,
+    this.icon,
+    this.daysOfWeek,
   });
 
   Map<String, dynamic> toJson() {
@@ -83,7 +91,11 @@ class MedicationFirebase {
     
     if (type != null) json['type'] = type!;
     if (totalAmount != null) json['totalAmount'] = totalAmount!;
+    if (remainingAmount != null) json['remainingAmount'] = remainingAmount!;
     if (endDate != null) json['endDate'] = endDate!;
+    if (color != null) json['color'] = color!;
+    if (icon != null) json['icon'] = icon!;
+    if (daysOfWeek != null) json['daysOfWeek'] = daysOfWeek!;
     
     return json;
   }
@@ -113,6 +125,12 @@ class MedicationFirebase {
       frequency = const MedicationFrequency();
     }
     
+    // Parse daysOfWeek safely
+    List<int>? daysOfWeek;
+    if (json['daysOfWeek'] is List) {
+      daysOfWeek = (json['daysOfWeek'] as List).map((e) => e as int).toList();
+    }
+    
     return MedicationFirebase(
       id: id,
       name: json['name'] as String? ?? '',
@@ -123,7 +141,11 @@ class MedicationFirebase {
       frequency: frequency,
       type: json['type'] as String?,
       totalAmount: json['totalAmount'] as int?,
+      remainingAmount: json['remainingAmount'] as int?,
       endDate: json['endDate'] as String?,
+      color: json['color'] as String?,
+      icon: json['icon'] as String?,
+      daysOfWeek: daysOfWeek,
     );
   }
 
@@ -136,7 +158,11 @@ class MedicationFirebase {
     MedicationFrequency? frequency,
     String? type,
     int? totalAmount,
+    int? remainingAmount,
     String? endDate,
+    String? color,
+    String? icon,
+    List<int>? daysOfWeek,
   }) {
     return MedicationFirebase(
       id: id,
@@ -148,8 +174,63 @@ class MedicationFirebase {
       frequency: frequency ?? this.frequency,
       type: type ?? this.type,
       totalAmount: totalAmount ?? this.totalAmount,
+      remainingAmount: remainingAmount ?? this.remainingAmount,
       endDate: endDate ?? this.endDate,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
+      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
     );
+  }
+  
+  /// Check if medication is due on a specific date
+  bool isMedicationDueOnDate(DateTime date) {
+    debugPrint('[MED DUE CHECK] Checking ${name} for ${date.toIso8601String()}');
+    
+    // Must be active
+    if (!active) {
+      debugPrint('[MED DUE CHECK] ${name} is not active');
+      return false;
+    }
+    
+    // Check start date
+    final start = DateTime.parse(startDate);
+    if (date.isBefore(DateTime(start.year, start.month, start.day))) {
+      debugPrint('[MED DUE CHECK] ${name} starts after ${date}');
+      return false;
+    }
+    
+    // Check remaining amount
+    if (remainingAmount != null && remainingAmount! <= 0) {
+      debugPrint('[MED DUE CHECK] ${name} has no remaining amount');
+      return false;
+    }
+    
+    // Check day of week if specified
+    if (daysOfWeek != null && daysOfWeek!.isNotEmpty) {
+      final dayOfWeek = date.weekday; // 1=Monday, 7=Sunday
+      if (!daysOfWeek!.contains(dayOfWeek)) {
+        debugPrint('[MED DUE CHECK] ${name} not scheduled for day ${dayOfWeek}');
+        return false;
+      }
+    }
+    
+    // Must have at least one frequency slot
+    if (!frequency.morning && !frequency.afternoon && !frequency.evening) {
+      debugPrint('[MED DUE CHECK] ${name} has no frequency slots');
+      return false;
+    }
+    
+    debugPrint('[MED DUE CHECK] ${name} IS DUE on ${date}');
+    return true;
+  }
+  
+  /// Get list of time slots for this medication
+  List<String> getTimeSlots() {
+    final slots = <String>[];
+    if (frequency.morning) slots.add('morning');
+    if (frequency.afternoon) slots.add('afternoon');
+    if (frequency.evening) slots.add('evening');
+    return slots;
   }
 
   /// Helper to check if medication is scheduled for a specific time
@@ -249,13 +330,24 @@ class MedicationIntake {
 /// Extension for backwards compatibility with UI
 extension MedicationFirebaseUI on MedicationFirebase {
   Color get displayColor {
+    // Use stored color if available
+    if (color != null) {
+      return parseColor(color!);
+    }
+    // Fallback to frequency-based color
     if (frequency.morning) return const Color(0xFFFFD166);
     if (frequency.afternoon) return const Color(0xFF06D6A0);
     if (frequency.evening) return const Color(0xFF9D84FF);
     return const Color(0xFF4FC3F7);
   }
 
-  IconData get displayIcon => Icons.medication;
+  IconData get displayIcon {
+    // Use stored icon if available
+    if (icon != null) {
+      return mapIconStringToIconData(icon!);
+    }
+    return Icons.medication_rounded;
+  }
 
   String get displayTime {
     if (frequency.morning) return '08:00';
@@ -263,6 +355,41 @@ extension MedicationFirebaseUI on MedicationFirebase {
     if (frequency.evening) return '20:00';
     return '09:00';
   }
+}
+
+/// Map icon string key to IconData
+IconData mapIconStringToIconData(String iconKey) {
+  debugPrint('[ICON MAP] Mapping icon key: $iconKey');
+  switch (iconKey.toLowerCase()) {
+    case 'pill':
+      return Icons.medication_rounded;
+    case 'capsule':
+      return Icons.medication_liquid_rounded;
+    case 'bottle':
+      return Icons.local_drink_rounded;
+    case 'vitamin':
+      return Icons.restaurant_rounded;
+    case 'injection':
+      return Icons.vaccines_rounded;
+    case 'drops':
+    case 'drop':
+      return Icons.water_drop_rounded;
+    case 'syrup':
+      return Icons.science_rounded;
+    case 'inhaler':
+      return Icons.air_rounded;
+    default:
+      return Icons.medication_rounded;
+  }
+}
+
+/// Parse hex color string to Color
+Color parseColor(String hexString) {
+  debugPrint('[COLOR PARSE] Parsing color: $hexString');
+  final buffer = StringBuffer();
+  if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+  buffer.write(hexString.replaceFirst('#', ''));
+  return Color(int.parse(buffer.toString(), radix: 16));
 }
 
 

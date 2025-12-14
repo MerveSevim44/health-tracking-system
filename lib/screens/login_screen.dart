@@ -96,7 +96,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         _showMessage('Welcome back!');
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+          // Auth Wrapper'a yönlendir (mood check-in kontrolü için)
+          Navigator.pushNamedAndRemoveUntil(context, '/auth-wrapper', (route) => false);
         }
       }
     } catch (e) {

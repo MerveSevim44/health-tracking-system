@@ -153,7 +153,7 @@ class _MonthlyCalendarModalState extends State<MonthlyCalendarModal> with Single
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
+                  color: AppColors.lightTextPrimary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -163,7 +163,7 @@ class _MonthlyCalendarModalState extends State<MonthlyCalendarModal> with Single
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textLight.withValues(alpha: 0.8),
+                  color: AppColors.lightTextTertiary.withValues(alpha: 0.8),
                 ),
               ),
             ],
@@ -322,7 +322,7 @@ class _MonthlyCalendarModalState extends State<MonthlyCalendarModal> with Single
                     ? Colors.white
                     : isToday
                         ? const Color(0xFF9D84FF)
-                        : AppColors.textDark,
+                        : AppColors.lightTextPrimary,
               ),
             ),
           ),

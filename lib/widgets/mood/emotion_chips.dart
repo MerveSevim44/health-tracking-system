@@ -56,12 +56,12 @@ class _EmotionChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected 
-              ? AppColors.moodHappy.withOpacity(0.2)
+              ? AppColors.emotionHappy.withOpacity(0.2)
               : Colors.white.withOpacity(0.3),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected 
-                ? AppColors.moodHappy
+                ? AppColors.emotionHappy
                 : Colors.transparent,
             width: 2,
           ),
@@ -75,7 +75,7 @@ class _EmotionChip extends StatelessWidget {
               emotion,
               style: AppTextStyles.bodyMedium.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? AppColors.textDark : AppColors.textLight,
+                color: isSelected ? AppColors.lightTextPrimary : AppColors.lightTextTertiary,
               ),
             ),
           ],

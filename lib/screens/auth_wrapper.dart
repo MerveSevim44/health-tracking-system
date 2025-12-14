@@ -1,10 +1,12 @@
 // 📁 lib/screens/auth_wrapper.dart
-// Wrapper to handle mood check-in after login
+// Login sonrası mood kontrolü - Günde 1-2 kere gösterilir
 
 import 'package:flutter/material.dart';
-import 'package:health_care/widgets/mood_checkin_dialog.dart';
-import 'package:health_care/screens/pastel_home_navigation.dart';
-import 'package:health_care/services/mood_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'mood_checkin_screen.dart';
+import 'pastel_home_navigation.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -14,96 +16,91 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  bool _isChecking = true;
-  bool _showMoodCheckin = false;
+  bool _isLoading = true;
+  bool _shouldShowMoodCheckin = false;
+
+  final FirebaseDatabase _database = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL: "https://health-tracking-system-700bf-default-rtdb.europe-west1.firebasedatabase.app"
+  );
 
   @override
   void initState() {
     super.initState();
-    _checkDailyMood();
+    _checkMoodStatus();
   }
 
-  Future<void> _checkDailyMood() async {
+  Future<void> _checkMoodStatus() async {
     try {
-      debugPrint('🔍 Checking today mood...');
-      final moodService = MoodService();
-      final todayMood = await moodService.getTodayMood();
-
-      if (!mounted) return;
-
-      // Check if mood was logged today
-      if (todayMood == null) {
-        debugPrint('❌ No mood for today → redirecting to MoodCheckinScreen');
-        setState(() {
-          _showMoodCheckin = true;
-          _isChecking = false;
-        });
-      } else {
-        debugPrint('✅ Today mood found (ID: ${todayMood.id})');
-        setState(() {
-          _showMoodCheckin = false;
-          _isChecking = false;
-        });
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        setState(() => _isLoading = false);
+        return;
       }
-    } catch (e, stackTrace) {
-      debugPrint('❌ Error checking mood: $e');
-      debugPrint('Stack trace: $stackTrace');
-      // On error, show mood check-in screen
-      if (!mounted) return;
+
+      // Check if today's mood exists using the new structure: moods/{uid}/{YYYY-MM-DD}
+      final now = DateTime.now();
+      final todayKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      
+      // Check if mood entry exists for today
+      final moodRef = _database.ref('moods/$userId/$todayKey');
+      final snapshot = await moodRef.get();
+      
+      // If today's mood exists, don't show the check-in screen
+      final shouldShow = !snapshot.exists;
+      
+      debugPrint('📊 Mood Check: Today=$todayKey, Exists=${snapshot.exists}, ShouldShow=$shouldShow');
+      
       setState(() {
-        _showMoodCheckin = true;
-        _isChecking = false;
+        _shouldShowMoodCheckin = shouldShow;
+        _isLoading = false;
+      });
+      
+    } catch (e) {
+      debugPrint('❌ Error checking mood status: $e');
+      setState(() {
+        _shouldShowMoodCheckin = true; // Show on error
+        _isLoading = false;
       });
     }
+  }
+
+  void _onMoodComplete() {
+    debugPrint('✅ Mood check-in completed, navigating to home');
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const PastelHomeNavigation()),
+    );
+  }
+
+  void _onMoodSkip() {
+    debugPrint('⏭️ Mood check-in skipped, navigating to home');
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const PastelHomeNavigation()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isChecking) {
+    if (_isLoading) {
       return const Scaffold(
+        backgroundColor: Color(0xFFFFF9F0),
         body: Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            color: Color(0xFFFFD93D),
+          ),
         ),
       );
     }
 
-    // Show home navigation first
-    Widget homeNav = const PastelHomeNavigation();
-
-    // If mood check-in needed, show it as a modal dialog
-    if (_showMoodCheckin) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _showMoodCheckinDialog(context);
-        }
-      });
+    // Mood check-in gösterilmeli mi?
+    if (_shouldShowMoodCheckin) {
+      return MoodCheckinScreen(
+        onComplete: _onMoodComplete,
+        onSkip: _onMoodSkip,
+      );
     }
 
-    return homeNav;
-  }
-
-  void _showMoodCheckinDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // User must select mood
-      builder: (dialogContext) => MoodCheckinDialog(
-        onComplete: () {
-          Navigator.of(dialogContext).pop(); // Close dialog
-          if (mounted) {
-            setState(() {
-              _showMoodCheckin = false;
-            });
-          }
-        },
-        onSkip: () {
-          Navigator.of(dialogContext).pop(); // Close dialog
-          if (mounted) {
-            setState(() {
-              _showMoodCheckin = false;
-            });
-          }
-        },
-      ),
-    );
+    // Direkt ana sayfaya git
+    return const PastelHomeNavigation();
   }
 }

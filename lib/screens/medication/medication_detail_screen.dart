@@ -35,7 +35,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
         ModalRoute.of(context)!.settings.arguments as Medication;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.lightBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -88,7 +88,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
+                        color: AppColors.lightTextPrimary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -99,7 +99,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
                     Text(
                       medication.dosage,
                       style: AppTextStyles.bodyLarge.copyWith(
-                        color: AppColors.textLight,
+                        color: AppColors.lightTextTertiary,
                         fontSize: 18,
                       ),
                     ),
@@ -166,7 +166,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
               ),
               child: const Icon(
                 Icons.arrow_back,
-                color: AppColors.textDark,
+                color: AppColors.lightTextPrimary,
                 size: 24,
               ),
             ),
@@ -178,7 +178,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
+                  color: AppColors.lightTextPrimary,
                 ),
               ),
             ),
@@ -236,7 +236,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: AppColors.textDark,
+              color: AppColors.lightTextPrimary,
             ),
           ),
         ],

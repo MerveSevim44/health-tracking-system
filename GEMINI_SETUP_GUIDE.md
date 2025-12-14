@@ -352,3 +352,6 @@ Your AI health coach is now powered by Google's Gemini AI!
 
 **Your users will now have real AI-powered conversations!** 🤖✨
 
+
+
+

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/chat_models.dart';
 import '../services/chat_service.dart';
-import '../services/gemini_service.dart';
+import '../services/ai_coach_service.dart';
 import '../theme/modern_colors.dart';
 import 'dart:ui';
 
@@ -17,7 +17,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
   final ChatService _chatService = ChatService();
-  final GeminiService _geminiService = GeminiService();
+  final AiCoachService _aiCoachService = AiCoachService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -54,10 +54,6 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       _currentSessionId = widget.sessionId ?? 
           await _chatService.getTodayCheckInSession(userId);
       
-      // Initialize Gemini with user context
-      final username = FirebaseAuth.instance.currentUser?.displayName;
-      _geminiService.initializeContext(username: username);
-      
       if (mounted) setState(() => _isLoading = false);
     } catch (e) {
       print('❌ Error initializing session: $e');
@@ -77,7 +73,6 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     try {
       _messageController.clear();
 
-      // Add user message to Firebase
       await _chatService.addMessage(
         userId: userId,
         sessionId: _currentSessionId!,
@@ -88,11 +83,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
       _scrollToBottom();
 
-      // Get AI response from Gemini
-      await Future.delayed(const Duration(milliseconds: 500));
-      final aiResponse = await _geminiService.sendMessage(text);
+      // Generate AI response with Gemini (with fallback)
+      // Service handles all errors and returns fallback message - never throws
+      await Future.delayed(const Duration(milliseconds: 800));
+      final aiResponse = await _aiCoachService.generateChatResponse(text);
       
-      // Add AI response to Firebase
       await _chatService.addMessage(
         userId: userId,
         sessionId: _currentSessionId!,
@@ -103,14 +98,25 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
       _scrollToBottom();
     } catch (e) {
-      print('❌ Error sending message: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: ModernAppColors.error,
-          ),
-        );
+      // 🛡️ Silent error logging - this should rarely happen (only Firebase errors)
+      // AI errors are handled by service and return fallback message
+      debugPrint('❌ [Chat Screen] Firebase error (silent): ${e.runtimeType}');
+      
+      // If Firebase fails, still try to add fallback message so user sees something
+      try {
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId != null && _currentSessionId != null) {
+          await _chatService.addMessage(
+            userId: userId,
+            sessionId: _currentSessionId!,
+            sender: 'ai',
+            text: 'Bugün kendine küçük bir iyilik yapmayı unutma 🌿',
+            sentiment: 'positive',
+          );
+        }
+      } catch (e2) {
+        // Even fallback failed - log silently, don't show error to user
+        debugPrint('❌ [Chat Screen] Error adding fallback message: ${e2.runtimeType}');
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -135,6 +141,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
     return Scaffold(
       backgroundColor: ModernAppColors.darkBg,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
           // Animated background
@@ -425,70 +432,121 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
           decoration: BoxDecoration(
-            color: ModernAppColors.cardBg.withOpacity(0.9),
+            color: ModernAppColors.cardBg.withOpacity(0.95),
             border: Border(
               top: BorderSide(
-                color: ModernAppColors.deepPurple.withOpacity(0.3),
-                width: 1,
+                color: ModernAppColors.vibrantCyan.withOpacity(0.2),
+                width: 1.5,
               ),
             ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1C2038),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: ModernAppColors.vibrantCyan.withOpacity(0.25),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: ModernAppColors.vibrantCyan.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      onChanged: (value) => setState(() {}),
+                      style: const TextStyle(
+                        color: Color(0xFFFFFFFF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        height: 1.5,
+                      ),
+                      cursorColor: ModernAppColors.vibrantCyan,
+                      cursorWidth: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Mesajınızı yazın...',
+                        hintStyle: TextStyle(
+                          color: Color(0xFF9AA0B5),
+                          fontSize: 16,
+                        ),
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 0,
+                          vertical: 14,
+                        ),
+                      ),
+                      maxLines: 5,
+                      minLines: 1,
+                      textCapitalization: TextCapitalization.sentences,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (value) {
+                        if (value.trim().isNotEmpty && !_isSending) {
+                          _sendMessage();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
-                    color: ModernAppColors.darkBg,
-                    borderRadius: BorderRadius.circular(25),
+                    gradient: _messageController.text.trim().isNotEmpty && !_isSending
+                        ? ModernAppColors.primaryGradient
+                        : null,
+                    color: _messageController.text.trim().isEmpty || _isSending
+                        ? const Color(0xFF2A2E40)
+                        : null,
+                    shape: BoxShape.circle,
+                    boxShadow: _messageController.text.trim().isNotEmpty && !_isSending
+                        ? [
+                            BoxShadow(
+                              color: ModernAppColors.vibrantCyan.withOpacity(0.5),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : [],
                   ),
-                  child: TextField(
-                    controller: _messageController,
-                    style: const TextStyle(
-                      color: ModernAppColors.lightText,
-                      fontSize: 15,
-                    ),
-                    decoration: const InputDecoration(
-                      hintText: 'Type your message...',
-                      hintStyle: TextStyle(
-                        color: ModernAppColors.mutedText,
-                      ),
-                      border: InputBorder.none,
-                    ),
-                    maxLines: null,
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: ModernAppColors.primaryGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    ModernAppColors.primaryShadow(opacity: 0.4),
-                  ],
-                ),
-                child: _isSending
-                    ? const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: CircularProgressIndicator(
-                          color: ModernAppColors.lightText,
-                          strokeWidth: 2,
+                  child: _isSending
+                      ? const Padding(
+                          padding: EdgeInsets.all(14.0),
+                          child: CircularProgressIndicator(
+                            color: ModernAppColors.lightText,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : IconButton(
+                          icon: Icon(
+                            Icons.send_rounded,
+                            color: _messageController.text.trim().isNotEmpty
+                                ? ModernAppColors.lightText
+                                : const Color(0xFF5A5E70),
+                            size: 24,
+                          ),
+                          onPressed: _messageController.text.trim().isNotEmpty && !_isSending
+                              ? _sendMessage
+                              : null,
                         ),
-                      )
-                    : IconButton(
-                        icon: const Icon(
-                          Icons.send_rounded,
-                          color: ModernAppColors.lightText,
-                          size: 22,
-                        ),
-                        onPressed: _sendMessage,
-                      ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

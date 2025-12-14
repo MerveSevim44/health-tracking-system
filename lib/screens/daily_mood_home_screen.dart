@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:health_care/theme/modern_colors.dart';
+import 'package:health_care/screens/mood_checkin_screen.dart';
+import 'package:health_care/services/water_service.dart';
+import 'package:health_care/services/medication_service.dart';
+import 'package:health_care/services/sleep_service.dart';
+import 'package:health_care/services/mood_service.dart';
+import 'package:health_care/models/sleep_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'dart:ui';
 
 
@@ -14,6 +23,22 @@ class DailyMoodHomeScreen extends StatefulWidget {
 
 class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTickerProviderStateMixin {
   late AnimationController _floatController;
+  final WaterService _waterService = WaterService();
+  final MedicationService _medicationService = MedicationService();
+  final SleepService _sleepService = SleepService();
+  final MoodService _moodService = MoodService();
+  final FirebaseDatabase _database = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL: "https://health-tracking-system-700bf-default-rtdb.europe-west1.firebasedatabase.app"
+  );
+
+  // Real data
+  int _waterTodayML = 0;
+  int _waterGoalML = 2000;
+  int _medicationTaken = 0;
+  int _medicationTotal = 0;
+  String _sleepDuration = 'No data';
+  Map<String, double> _emotionDistribution = {};
 
   @override
   void initState() {
@@ -22,6 +47,163 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
+    _loadRealData();
+  }
+
+  Future<void> _loadRealData() async {
+    await Future.wait([
+      _loadWaterData(),
+      _loadMedicationData(),
+      _loadSleepData(),
+      _loadEmotionDistribution(),
+    ]);
+  }
+
+  Future<void> _loadWaterData() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      // Get today's water intake
+      final today = DateTime.now();
+      final todayTotal = await _waterService.getTotalIntakeForDate(today);
+      
+      // Get user's water goal
+      final goalSnapshot = await _database.ref('users/$userId/waterGoalMl').get();
+      final goalMl = goalSnapshot.value as int?;
+      
+      if (mounted) {
+        setState(() {
+          _waterTodayML = todayTotal;
+          _waterGoalML = goalMl ?? 2000;
+        });
+        debugPrint("Water today: $_waterTodayML / $_waterGoalML ml");
+      }
+    } catch (e) {
+      debugPrint('Error loading water data: $e');
+    }
+  }
+
+  Future<void> _loadMedicationData() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      // Get all active medications
+      final medicationsSnapshot = await _database.ref('medications/$userId').get();
+      final medicationsData = medicationsSnapshot.value as Map<dynamic, dynamic>?;
+      
+      if (medicationsData == null) {
+        if (mounted) {
+          setState(() {
+            _medicationTaken = 0;
+            _medicationTotal = 0;
+          });
+        }
+        return;
+      }
+
+      // Calculate total scheduled slots for today
+      int totalSlots = 0;
+      for (var medEntry in medicationsData.entries) {
+        final medData = medEntry.value as Map;
+        if (medData['active'] != true) continue;
+
+        final frequency = medData['frequency'] as Map? ?? {};
+        if (frequency['morning'] == true) totalSlots++;
+        if (frequency['afternoon'] == true) totalSlots++;
+        if (frequency['evening'] == true) totalSlots++;
+      }
+
+      // Get taken count for today
+      final takenCount = await _medicationService.getTodayCompletionCount();
+
+      if (mounted) {
+        setState(() {
+          _medicationTotal = totalSlots;
+          _medicationTaken = takenCount;
+        });
+        debugPrint("Medication taken today: $_medicationTaken / $_medicationTotal");
+      }
+    } catch (e) {
+      debugPrint('Error loading medication data: $e');
+    }
+  }
+
+  Future<void> _loadSleepData() async {
+    try {
+      // Get yesterday's sleep (last night)
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final yesterdayStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
+      final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+      
+      final sleepLogs = await _sleepService.getSleepForDateRange(yesterdayStart, yesterdayEnd);
+      
+      if (sleepLogs.isNotEmpty) {
+        // Get the most recent sleep log for yesterday
+        final sleepLog = sleepLogs.first;
+        
+        if (mounted) {
+          setState(() {
+            _sleepDuration = sleepLog.formattedDuration;
+          });
+          debugPrint("Sleep last night: $_sleepDuration");
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _sleepDuration = 'No data';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading sleep data: $e');
+      if (mounted) {
+        setState(() {
+          _sleepDuration = 'No data';
+        });
+      }
+    }
+  }
+
+  Future<void> _loadEmotionDistribution() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      // Get last 7 days of moods
+      final now = DateTime.now();
+      final weekAgo = now.subtract(const Duration(days: 7));
+      
+      final emotionFrequency = await _moodService.getEmotionFrequency(weekAgo, now);
+      
+      if (emotionFrequency.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _emotionDistribution = {};
+          });
+        }
+        return;
+      }
+
+      // Calculate total emotions
+      final totalEmotions = emotionFrequency.values.fold<int>(0, (sum, count) => sum + count);
+      
+      // Calculate percentages
+      final Map<String, double> distribution = {};
+      emotionFrequency.forEach((emotion, count) {
+        distribution[emotion] = (count / totalEmotions) * 100;
+      });
+
+      if (mounted) {
+        setState(() {
+          _emotionDistribution = distribution;
+        });
+        debugPrint("Emotion distribution: $_emotionDistribution");
+      }
+    } catch (e) {
+      debugPrint('Error loading emotion distribution: $e');
+    }
   }
 
   @override
@@ -34,20 +216,21 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
   Widget build(BuildContext context) {
     final displayUsername = widget.username ?? 'Friend';
 
-    return Scaffold(
-      backgroundColor: ModernAppColors.darkBg,
-      body: Stack(
-        children: [
-          // Animated background
-          _buildAnimatedBackground(),
-          
-          // Main content
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    return Stack(
+      children: [
+        // Animated background
+        _buildAnimatedBackground(),
+        
+        // Main content
+        SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, kBottomNavigationBarHeight + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                   const SizedBox(height: 10),
                   
                   // Greeting Header
@@ -65,13 +248,13 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
                   
                   const SizedBox(height: 25),
                   
-                  // Today's Stats
-                  _buildTodayStats(),
+                  // Today's Stats - 3 Cards
+                  _buildTrackingCards(),
                   
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 30),
                   
-                  // Recent Activities
-                  _buildRecentActivities(),
+                  // Emotion Distribution
+                  _buildEmotionDistribution(),
                   
                   const SizedBox(height: 20),
                 ],
@@ -79,8 +262,7 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildAnimatedBackground() {
@@ -207,8 +389,14 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
   ) {
     return GestureDetector(
       onTap: () {
-        if (route == '/mood') {
-          Navigator.pushNamed(context, '/mood');
+        if (label == 'Log Mood') {
+          debugPrint("Mood route opened");
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const MoodCheckinScreen(),
+            ),
+          );
         } else {
           Navigator.pushNamed(context, route);
         }
@@ -317,168 +505,324 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
     );
   }
 
-  Widget _buildTodayStats() {
+  Widget _buildTrackingCards() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Today's Progress",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: ModernAppColors.lightText,
-          ),
-        ),
-        const SizedBox(height: 15),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Water',
-                '6/8',
-                'glasses',
-                Icons.water_drop_rounded,
-                ModernAppColors.vibrantCyan,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Meds',
-                '2/3',
-                'taken',
-                Icons.medication_rounded,
-                ModernAppColors.accentOrange,
-              ),
-            ),
-          ],
-        ),
+        const SizedBox(height: 12),
+        _buildWaterCard(),
+        const SizedBox(height: 12),
+        _buildMedicationCard(),
+        const SizedBox(height: 12),
+        _buildSleepCard(),
       ],
     );
   }
 
-  Widget _buildStatCard(
-    String title,
-    String value,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: ModernAppColors.cardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
+  Widget _buildWaterCard() {
+    final progress = _waterGoalML > 0 ? (_waterTodayML / _waterGoalML).clamp(0.0, 1.0) : 0.0;
+    final percentage = (progress * 100).toInt();
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/water/home');
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: ModernAppColors.cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: ModernAppColors.vibrantCyan.withOpacity(0.3),
+            width: 1,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Left: Circular icon
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: ModernAppColors.vibrantCyan.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.water_drop_rounded,
+                    color: ModernAppColors.vibrantCyan,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Center: Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Water Intake',
+                        style: TextStyle(
+                          color: ModernAppColors.lightText,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$_waterTodayML / $_waterGoalML ml',
+                        style: const TextStyle(
+                          color: ModernAppColors.mutedText,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Right: Percentage
+                Text(
+                  '$percentage%',
+                  style: TextStyle(
+                    color: ModernAppColors.vibrantCyan,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              color: ModernAppColors.mutedText,
-              fontSize: 13,
+            const SizedBox(height: 16),
+            // Bottom: Progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: ModernAppColors.vibrantCyan.withOpacity(0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(ModernAppColors.vibrantCyan),
+                minHeight: 4,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: ModernAppColors.lightText,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: ModernAppColors.mutedText,
-              fontSize: 11,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildRecentActivities() {
-    final activities = [
-      {'title': 'Morning meditation', 'time': '8:30 AM', 'icon': Icons.self_improvement},
-      {'title': 'Mood check-in', 'time': '10:15 AM', 'icon': Icons.mood},
-      {'title': 'Water logged', 'time': '11:30 AM', 'icon': Icons.water_drop},
-    ];
+  Widget _buildMedicationCard() {
+    final hasPending = _medicationTotal > 0 && _medicationTaken < _medicationTotal;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Recent Activities',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: ModernAppColors.lightText,
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/medication');
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: ModernAppColors.cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: ModernAppColors.accentOrange.withOpacity(0.3),
+            width: 1,
           ),
         ),
-        const SizedBox(height: 15),
-        ...activities.map((activity) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: ModernAppColors.cardBg,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
+                // Left: Medication icon
                 Container(
-                  width: 45,
-                  height: 45,
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: ModernAppColors.accentOrange.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.medication_rounded,
+                    color: ModernAppColors.accentOrange,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Center: Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Medication',
+                        style: TextStyle(
+                          color: ModernAppColors.lightText,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$_medicationTaken / $_medicationTotal taken',
+                        style: const TextStyle(
+                          color: ModernAppColors.mutedText,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (hasPending) ...[
+              const SizedBox(height: 12),
+              Text(
+                'You have pending medication',
+                style: TextStyle(
+                  color: ModernAppColors.accentOrange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSleepCard() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/sleep-tracking');
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: ModernAppColors.cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: ModernAppColors.deepPurple.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Left: Moon icon
+                Container(
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: ModernAppColors.deepPurple.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    activity['icon'] as IconData,
+                    Icons.bedtime_rounded,
                     color: ModernAppColors.deepPurple,
-                    size: 22,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 15),
+                const SizedBox(width: 16),
+                // Center: Title and subtitle
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        activity['title'] as String,
-                        style: const TextStyle(
+                      const Text(
+                        'Sleep',
+                        style: TextStyle(
                           color: ModernAppColors.lightText,
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
-                        activity['time'] as String,
+                        _sleepDuration,
                         style: const TextStyle(
                           color: ModernAppColors.mutedText,
-                          fontSize: 12,
+                          fontSize: 14,
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Last night's sleep",
+              style: TextStyle(
+                color: ModernAppColors.mutedText,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmotionDistribution() {
+    if (_emotionDistribution.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Sort by percentage (descending) and take top emotions
+    final sortedEmotions = _emotionDistribution.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Emotion Distribution',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: ModernAppColors.lightText,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ...sortedEmotions.take(5).map((entry) {
+          final emotion = entry.key;
+          final percentage = entry.value.toInt();
+          
+          // Get emotion color (use predefined colors or default)
+          Color emotionColor = _getEmotionColor(emotion);
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                // Color dot
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: emotionColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Label
+                Expanded(
+                  child: Text(
+                    _capitalizeEmotion(emotion),
+                    style: const TextStyle(
+                      color: ModernAppColors.lightText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                // Percentage
+                Text(
+                  '$percentage%',
+                  style: const TextStyle(
+                    color: ModernAppColors.mutedText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -487,5 +831,38 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
         }).toList(),
       ],
     );
+  }
+
+  Color _getEmotionColor(String emotion) {
+    final emotionLower = emotion.toLowerCase();
+    switch (emotionLower) {
+      case 'happy':
+      case 'excited':
+      case 'grateful':
+        return ModernAppColors.accentGreen;
+      case 'sad':
+      case 'lonely':
+        return ModernAppColors.accentPink;
+      case 'anxious':
+      case 'stressed':
+      case 'overwhelmed':
+        return ModernAppColors.accentOrange;
+      case 'calm':
+      case 'peaceful':
+      case 'relaxed':
+        return ModernAppColors.vibrantCyan;
+      case 'angry':
+      case 'frustrated':
+        return Colors.red;
+      case 'tired':
+        return ModernAppColors.deepPurple;
+      default:
+        return ModernAppColors.mutedText;
+    }
+  }
+
+  String _capitalizeEmotion(String emotion) {
+    if (emotion.isEmpty) return emotion;
+    return emotion[0].toUpperCase() + emotion.substring(1);
   }
 }

@@ -6,6 +6,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 // 🔥 YENİ: Shared Preferences importu eklendi
 import 'package:shared_preferences/shared_preferences.dart';
+// 🔔 NOTIFICATION SERVICE
+import 'package:health_care/services/notification_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -127,6 +129,14 @@ class AuthService {
       );
       debugPrint('Giriş Başarılı.');
 
+      // 🔔 Schedule notifications after successful login
+      try {
+        await NotificationService().rescheduleAllNotifications();
+        debugPrint('✅ Notifications scheduled after login');
+      } catch (e) {
+        debugPrint('⚠️ Failed to schedule notifications: $e');
+      }
+
     } on FirebaseAuthException catch (e) {
       String errorMessage;
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
@@ -172,6 +182,10 @@ class AuthService {
 // ... (Mevcut kod aynı kalır)
   Future<void> signOut() async {
     try {
+      // 🔔 Cancel all notifications before sign out
+      await NotificationService().cancelAllNotifications();
+      debugPrint('✅ All notifications cancelled');
+      
       // Firebase Auth üzerinden çıkış yapılır
       await _auth.signOut();
       debugPrint('Kullanıcı çıkış yaptı.');

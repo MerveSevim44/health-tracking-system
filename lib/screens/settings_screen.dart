@@ -8,6 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/modern_colors.dart';
 import '../models/water_model.dart';
 import 'dart:ui';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,9 +25,15 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   String? _username;
   String? _email;
   bool _medicationRemindersEnabled = true;
+  bool _waterRemindersEnabled = true;
   int _waterGoal = 2500;
   bool _isLoading = true;
   late AnimationController _floatController;
+  
+  final FirebaseDatabase _database = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL: "https://health-tracking-system-700bf-default-rtdb.europe-west1.firebasedatabase.app"
+  );
 
   @override
   void initState() {
@@ -42,18 +52,15 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     _floatController.dispose();
     super.dispose();
   }
-
   Future<void> _loadUserData() async {
     final user = _authService.getCurrentUser();
     final username = await _authService.fetchUsername();
-    
     setState(() {
       _username = username ?? 'User';
       _email = user?.email ?? '';
       _isLoading = false;
     });
   }
-
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     
@@ -76,6 +83,27 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       await prefs.setBool(key, value);
     } else if (value is int) {
       await prefs.setInt(key, value);
+    }
+  }
+  
+  /// Save notification preference to Firebase
+  Future<void> _saveNotificationPreference(String key, bool value) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    
+    try {
+      await _database.ref('users/$userId/notificationPreferences/$key').set(value);
+      debugPrint('✅ [Settings] Saved $key: $value');
+    } catch (e) {
+      debugPrint('❌ [Settings] Failed to save notification preference: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save notification settings'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -145,7 +173,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         children: [
           // Animated background
           _buildAnimatedBackground(),
-          
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -153,7 +180,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 10),
-                  
                   // Header
                   const Text(
                     'Settings',
@@ -163,32 +189,21 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       color: ModernAppColors.lightText,
                     ),
                   ),
-                  
                   const SizedBox(height: 30),
-                  
                   // Profile Card
                   _buildProfileCard(),
-                  
                   const SizedBox(height: 25),
-                  
                   // Settings sections
                   _buildSettingsSection(),
-                  
                   const SizedBox(height: 25),
-                  
                   // Preferences
                   _buildPreferencesSection(),
-                  
                   const SizedBox(height: 25),
-                  
                   // About section
                   _buildAboutSection(),
-                  
                   const SizedBox(height: 25),
-                  
                   // Logout button
                   _buildLogoutButton(),
-                  
                   const SizedBox(height: 20),
                 ],
               ),
@@ -318,26 +333,56 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           ),
         ),
         const SizedBox(height: 15),
-        _buildSettingsTile(
-          icon: Icons.water_drop_rounded,
-          title: 'Daily Water Goal',
-          subtitle: '$_waterGoal ml',
-          color: ModernAppColors.vibrantCyan,
-          onTap: () => _showWaterGoalDialog(),
-        ),
-        const SizedBox(height: 10),
         _buildSwitchTile(
-          icon: Icons.notifications_rounded,
+          icon: Icons.medication_rounded,
           title: 'Medication Reminders',
           subtitle: 'Get notified for medications',
           color: ModernAppColors.accentOrange,
           value: _medicationRemindersEnabled,
-          onChanged: (value) {
+          onChanged: (value) async {
             setState(() {
               _medicationRemindersEnabled = value;
             });
-            _saveSetting('medication_reminders', value);
+            await _saveNotificationPreference('medicationReminders', value);
+            
+            // 🔔 Reschedule or cancel notifications
+            if (value) {
+              await NotificationService().scheduleAllMedicationNotifications();
+            } else {
+              // Cancel all medication notifications
+              // Note: We can't cancel all at once without IDs, so we reschedule which will check preferences
+              await NotificationService().scheduleAllMedicationNotifications();
+            }
           },
+        ),
+        const SizedBox(height: 10),
+        _buildSwitchTile(
+          icon: Icons.water_drop_rounded,
+          title: 'Water Reminders',
+          subtitle: 'Get notified to stay hydrated',
+          color: ModernAppColors.vibrantCyan,
+          value: _waterRemindersEnabled,
+          onChanged: (value) async {
+            setState(() {
+              _waterRemindersEnabled = value;
+            });
+            await _saveNotificationPreference('waterReminders', value);
+            
+            // 🔔 Reschedule or cancel notifications
+            if (value) {
+              await NotificationService().scheduleWaterReminders();
+            } else {
+              await NotificationService().cancelAllWaterReminders();
+            }
+          },
+        ),
+        const SizedBox(height: 10),
+        _buildSettingsTile(
+          icon: Icons.water_drop_rounded,
+          title: 'Water Goal',
+          subtitle: '$_waterGoal ml',
+          color: ModernAppColors.vibrantCyan,
+          onTap: () => _showWaterGoalDialog(),
         ),
       ],
     );

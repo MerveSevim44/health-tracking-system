@@ -4,6 +4,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:health_care/models/mood_firebase_model.dart';
 
 class MoodService {
@@ -23,7 +24,7 @@ class MoodService {
     return _database.ref('moods/$_userId');
   }
 
-  /// Add a new mood entry
+  /// Add a new mood entry with date-based structure: moods/{uid}/{YYYY-MM-DD}
   Future<String> addMood({
     required int moodLevel,
     required List<String> emotions,
@@ -31,9 +32,12 @@ class MoodService {
     double sentimentScore = 0.0,
     double sentimentMagnitude = 0.0,
   }) async {
+    final now = DateTime.now();
+    final dateKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    
     final mood = MoodFirebase(
-      id: '',
-      date: DateTime.now().toIso8601String(),
+      id: dateKey,
+      date: now.toIso8601String(),
       moodLevel: moodLevel,
       emotions: emotions,
       notes: notes,
@@ -41,9 +45,10 @@ class MoodService {
       sentimentMagnitude: sentimentMagnitude,
     );
 
-    final ref = _moodsRef().push();
+    // Save with date as key to prevent duplicates for the same day
+    final ref = _moodsRef().child(dateKey);
     await ref.set(mood.toJson());
-    return ref.key!;
+    return dateKey;
   }
 
   /// Update existing mood
@@ -72,28 +77,24 @@ class MoodService {
     });
   }
 
-  /// Get mood for today
+  /// Get mood for today using date-based structure
   Future<MoodFirebase?> getTodayMood() async {
     final now = DateTime.now();
     final todayKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     
-    final snapshot = await _moodsRef().get();
-    final data = snapshot.value as Map<dynamic, dynamic>?;
+    final snapshot = await _moodsRef().child(todayKey).get();
     
-    if (data == null) return null;
+    if (!snapshot.exists) return null;
 
-    for (var entry in data.entries) {
-      final mood = MoodFirebase.fromJson(
-        entry.key as String,
-        Map<String, dynamic>.from(entry.value as Map),
+    try {
+      return MoodFirebase.fromJson(
+        todayKey,
+        Map<String, dynamic>.from(snapshot.value as Map),
       );
-      
-      if (mood.date.startsWith(todayKey)) {
-        return mood;
-      }
+    } catch (e) {
+      debugPrint('Error parsing today\'s mood: $e');
+      return null;
     }
-
-    return null;
   }
 
   /// Get moods for a specific date range

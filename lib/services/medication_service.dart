@@ -4,7 +4,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:health_care/models/medication_firebase_model.dart';
+import 'package:health_care/services/notification_service.dart';
 
 class MedicationService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -27,16 +29,48 @@ class MedicationService {
   Future<String> addMedication(MedicationFirebase medication) async {
     final ref = _medicationsRef().push();
     await ref.set(medication.toJson());
+    
+    // 🔔 Schedule notifications for this medication
+    if (medication.active) {
+      try {
+        await NotificationService().scheduleAllMedicationNotifications();
+        debugPrint('✅ [MedicationService] Notifications scheduled for new medication');
+      } catch (e) {
+        debugPrint('⚠️ [MedicationService] Failed to schedule notifications: $e');
+      }
+    }
+    
     return ref.key!;
   }
 
   /// Update existing medication
   Future<void> updateMedication(MedicationFirebase medication) async {
     await _medicationsRef().child(medication.id).update(medication.toJson());
+    
+    // 🔔 Reschedule notifications after update
+    try {
+      if (medication.active) {
+        await NotificationService().scheduleAllMedicationNotifications();
+        debugPrint('✅ [MedicationService] Notifications rescheduled after medication update');
+      } else {
+        await NotificationService().cancelAllMedicationNotifications(medication.id);
+        debugPrint('✅ [MedicationService] Notifications cancelled for inactive medication');
+      }
+    } catch (e) {
+      debugPrint('⚠️ [MedicationService] Failed to update notifications: $e');
+    }
   }
 
   /// Delete medication
   Future<void> deleteMedication(String medId) async {
+    // 🔔 Cancel notifications before deleting medication
+    try {
+      await NotificationService().cancelAllMedicationNotifications(medId);
+      debugPrint('✅ [MedicationService] Notifications cancelled for deleted medication');
+    } catch (e) {
+      debugPrint('⚠️ [MedicationService] Failed to cancel notifications: $e');
+    }
+    
     await _medicationsRef().child(medId).remove();
   }
 
@@ -77,7 +111,68 @@ class MedicationService {
     return _database.ref('medication_intakes/$_userId/$medId');
   }
 
-  /// Log a medication intake
+  /// Toggle medication intake for a specific slot
+  /// Path: medication_intakes/{uid}/{medId}/{YYYY-MM-DD}_{slot}
+  Future<void> toggleIntake({
+    required String medicationId,
+    required DateTime date,
+    required String slot, // 'morning' | 'afternoon' | 'evening'
+    String notes = '',
+  }) async {
+    final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final intakeKey = '${dateKey}_$slot';
+    final ref = _intakesRef(medicationId).child(intakeKey);
+    
+    debugPrint('[TOGGLE INTAKE] Path: medication_intakes/$_userId/$medicationId/$intakeKey');
+    
+    // Check if intake exists
+    final snapshot = await ref.get();
+    
+    if (snapshot.exists) {
+      // Toggle existing
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
+      final currentTaken = data['taken'] as bool? ?? false;
+      final newTaken = !currentTaken;
+      
+      debugPrint('[TOGGLE INTAKE] Toggling from $currentTaken to $newTaken');
+      
+      await ref.update({
+        'taken': newTaken,
+        'takenAt': newTaken ? DateTime.now().millisecondsSinceEpoch : null,
+      });
+      
+      // 🔔 Cancel notification if marked as taken
+      if (newTaken) {
+        try {
+          await NotificationService().cancelMedicationNotification(medicationId, slot);
+          debugPrint('✅ [MedicationService] Notification cancelled after marking as taken');
+        } catch (e) {
+          debugPrint('⚠️ [MedicationService] Failed to cancel notification: $e');
+        }
+      }
+    } else {
+      // Create new intake marked as taken
+      debugPrint('[TOGGLE INTAKE] Creating new intake as taken');
+      
+      await ref.set({
+        'date': dateKey,
+        'period': slot,
+        'taken': true,
+        'takenAt': DateTime.now().millisecondsSinceEpoch,
+        'notes': notes,
+      });
+      
+      // 🔔 Cancel notification since it's marked as taken
+      try {
+        await NotificationService().cancelMedicationNotification(medicationId, slot);
+        debugPrint('✅ [MedicationService] Notification cancelled after creating taken intake');
+      } catch (e) {
+        debugPrint('⚠️ [MedicationService] Failed to cancel notification: $e');
+      }
+    }
+  }
+  
+  /// Log a medication intake (legacy support)
   Future<String> logIntake({
     required String medicationId,
     required String takenStatus, // "take" | "skip" | "postpone" - legacy support

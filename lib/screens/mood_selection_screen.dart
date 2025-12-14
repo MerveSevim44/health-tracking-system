@@ -47,15 +47,17 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Consumer<MoodModel>(
       builder: (context, moodModel, child) {
         final selectedMoodIndex = moodModel.selectedMoodIndex;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: GradientBackground(
-        colors: const [
-          AppColors.gradientYellowStart,
-          AppColors.gradientYellowEnd,
+        colors: [
+          theme.colorScheme.primaryContainer,
+          theme.colorScheme.secondaryContainer,
         ],
         child: SafeArea(
           child: Column(
@@ -68,15 +70,15 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.arrow_back_ios),
-                      color: AppColors.textDark,
+                      color: theme.iconTheme.color,
                     ),
                     const Spacer(),
                     IconButton(
                       onPressed: selectedMoodIndex >= 0 ? _saveMood : null,
                       icon: const Icon(Icons.check),
                       color: selectedMoodIndex >= 0 
-                          ? AppColors.textDark 
-                          : AppColors.textLight,
+                          ? theme.iconTheme.color 
+                          : theme.disabledColor,
                     ),
                   ],
                 ),
@@ -106,9 +108,9 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                 builder: (context, double value, child) {
                   return Transform.scale(
                     scale: value,
-                    child: const MoodBlob(
+                    child: MoodBlob(
                       size: 200,
-                      color: AppColors.moodHappy,
+                      color: theme.colorScheme.primary,
                       expression: MoodExpression.happy,
                       animated: true,
                     ),
@@ -176,7 +178,7 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                     Text(
                       'How are you feeling?',
                       style: AppTextStyles.headlineMedium.copyWith(
-                        color: AppColors.textDark,
+                        color: theme.textTheme.bodyLarge?.color,
                         fontSize: 18,
                       ),
                     ),

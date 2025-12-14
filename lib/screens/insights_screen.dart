@@ -15,8 +15,8 @@ class InsightsScreen extends StatelessWidget {
       backgroundColor: Colors.transparent,
       body: GradientBackground(
         colors: const [
-          AppColors.gradientLavenderStart,
-          AppColors.gradientLavenderEnd,
+          AppColors.accent,
+          AppColors.secondary,
         ],
         child: SafeArea(
           child: SingleChildScrollView(
@@ -50,10 +50,10 @@ class InsightsScreen extends StatelessWidget {
                 _buildTestCard(
                   title: 'The balance\nof life today',
                   duration: '15 min',
-                  backgroundColor: AppColors.pastelMint,
+                  backgroundColor: AppColors.secondary.withOpacity(0.2),
                   blob: const MoodBlob(
                     size: 80,
-                    color: AppColors.moodCalm,
+                    color: AppColors.emotionCalm,
                     expression: MoodExpression.happy,
                   ),
                 ),
@@ -66,10 +66,10 @@ class InsightsScreen extends StatelessWidget {
                       child: _buildSmallTestCard(
                         title: 'Your source\nof negativity',
                         duration: '30 min',
-                        backgroundColor: AppColors.pastelBlue,
+                        backgroundColor: AppColors.info.withOpacity(0.2),
                         blob: const MoodBlob(
                           size: 60,
-                          color: AppColors.moodSad,
+                          color: AppColors.emotionSad,
                           expression: MoodExpression.sad,
                         ),
                       ),
@@ -79,10 +79,10 @@ class InsightsScreen extends StatelessWidget {
                       child: _buildSmallTestCard(
                         title: 'Triggers\nof bad moods',
                         duration: '20 min',
-                        backgroundColor: AppColors.pastelPeach,
+                        backgroundColor: AppColors.warning.withOpacity(0.2),
                         blob: const MoodBlob(
                           size: 60,
-                          color: AppColors.moodHappy,
+                          color: AppColors.emotionHappy,
                           expression: MoodExpression.anxious,
                         ),
                       ),
@@ -106,12 +106,12 @@ class InsightsScreen extends StatelessWidget {
         IconButton(
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back_ios),
-          color: AppColors.textDark,
+          color: AppColors.lightTextPrimary,
         ),
         IconButton(
           onPressed: () {},
           icon: const Icon(Icons.more_vert),
-          color: AppColors.textDark,
+          color: AppColors.lightTextPrimary,
         ),
       ],
     );
@@ -132,7 +132,7 @@ class InsightsScreen extends StatelessWidget {
           Text(
             'Mood over the last week',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textLight,
+              color: AppColors.lightTextTertiary,
             ),
           ),
         ],
@@ -205,20 +205,20 @@ class InsightsScreen extends StatelessWidget {
                     const Icon(
                       Icons.schedule_outlined,
                       size: 16,
-                      color: AppColors.textMedium,
+                      color: AppColors.lightTextSecondary,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       duration,
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textMedium,
+                        color: AppColors.lightTextSecondary,
                       ),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.textDark,
+                        color: AppColors.lightTextPrimary,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -266,13 +266,13 @@ class InsightsScreen extends StatelessWidget {
               const Icon(
                 Icons.schedule_outlined,
                 size: 14,
-                color: AppColors.textMedium,
+                color: AppColors.lightTextSecondary,
               ),
               const SizedBox(width: 4),
               Text(
                 duration,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textMedium,
+                  color: AppColors.lightTextSecondary,
                 ),
               ),
             ],
@@ -281,7 +281,7 @@ class InsightsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.textDark,
+              color: AppColors.lightTextPrimary,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(

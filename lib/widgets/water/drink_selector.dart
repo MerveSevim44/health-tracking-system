@@ -66,12 +66,12 @@ class DrinkSelector extends StatelessWidget {
       height: 56,
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
-        color: AppColors.textLight.withValues(alpha: 0.2),
+        color: AppColors.lightTextTertiary.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Icon(
         Icons.add,
-        color: AppColors.textLight,
+        color: AppColors.lightTextTertiary,
         size: 24,
       ),
     );
@@ -123,32 +123,32 @@ class DrinkTypes {
     DrinkType(
       name: 'Water',
       icon: Icons.water_drop,
-      color: AppColors.drinkWater,
+      color: WaterColors.drinkWater,
     ),
     DrinkType(
       name: 'Coffee',
       icon: Icons.coffee,
-      color: AppColors.drinkCoffee,
+      color: WaterColors.drinkCoffee,
     ),
     DrinkType(
       name: 'Tea',
       icon: Icons.local_cafe,
-      color: AppColors.drinkTea,
+      color: WaterColors.drinkTea,
     ),
     DrinkType(
       name: 'Matcha',
       icon: Icons.emoji_food_beverage,
-      color: AppColors.drinkMatcha,
+      color: WaterColors.drinkMatcha,
     ),
     DrinkType(
       name: 'Soda',
       icon: Icons.local_drink,
-      color: AppColors.drinkSoda,
+      color: WaterColors.drinkSoda,
     ),
     DrinkType(
       name: 'Wine',
       icon: Icons.wine_bar,
-      color: AppColors.drinkWine,
+      color: WaterColors.drinkWine,
     ),
     // Classic & Most Consumed Herbal Teas
     DrinkType(

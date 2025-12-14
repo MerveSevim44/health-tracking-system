@@ -102,8 +102,11 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
@@ -207,7 +210,7 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
                         'Select your daily usage times',
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.textLight,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -222,7 +225,7 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
                         'Select the days you will take the medication',
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.textLight,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -235,52 +238,61 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
                       const SizedBox(height: 24),
 
                       // Usage Instructions - Optional
-                      ExpansionTile(
-                        tilePadding: EdgeInsets.zero,
-                        title: Row(
-                          children: [
-                            Icon(Icons.info_outline, 
-                              size: 20, 
-                              color: AppColors.textLight,
+                      Builder(
+                        builder: (context) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          return ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            title: Row(
+                              children: [
+                                Icon(Icons.info_outline, 
+                                  size: 20, 
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Usage Instructions (Optional)',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.textTheme.bodyLarge?.color,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Usage Instructions (Optional)',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textDark,
+                            children: [
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark 
+                                      ? const Color(0xFF9D84FF).withValues(alpha: 0.15)
+                                      : const Color(0xFFF3EFFF),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _selectedType.usageInstructions,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: const Color(0xFF9D84FF),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 5,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        children: [
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3EFFF),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              _selectedType.usageInstructions,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF9D84FF),
-                                fontWeight: FontWeight.w500,
+                              const SizedBox(height: 12),
+                              _buildTextField(
+                                controller: _instructionsController,
+                                hint: 'Doctor notes or special instructions...',
+                                icon: Icons.notes,
+                                maxLines: 3,
+                                isRequired: false,
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            controller: _instructionsController,
-                            hint: 'Doctor notes or special instructions...',
-                            icon: Icons.notes,
-                            maxLines: 3,
-                            isRequired: false,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
+                              const SizedBox(height: 12),
+                            ],
+                          );
+                        }
                       ),
 
                       const SizedBox(height: 24),
@@ -314,6 +326,8 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
   }
 
   Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -323,32 +337,34 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? AppColors.darkCardBg : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back,
-                color: AppColors.textDark,
+                color: theme.textTheme.bodyLarge?.color,
                 size: 24,
               ),
             ),
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
                 'İlaç Ekle',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
+                  color: theme.textTheme.bodyLarge?.color,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
@@ -359,31 +375,37 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
   }
 
   Widget _buildSectionTitle(String title) {
+    final theme = Theme.of(context);
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: AppColors.textDark,
+        color: theme.textTheme.bodyLarge?.color,
       ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 
   Widget _buildTypeSelector() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkCardBg : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE8E8E8)),
       ),
       child: DropdownButtonFormField<MedicationType>(
         value: _selectedType,
+        style: TextStyle(color: theme.textTheme.bodyLarge?.color),
         decoration: const InputDecoration(
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           prefixIcon: Icon(Icons.category, color: Color(0xFF9D84FF)),
         ),
-        dropdownColor: Colors.white,
+        dropdownColor: isDark ? AppColors.darkCardBg : Colors.white,
         items: MedicationType.values.map((type) {
           return DropdownMenuItem(
             value: type,
@@ -391,7 +413,13 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
               children: [
                 Icon(type.icon, size: 20, color: type.color),
                 const SizedBox(width: 12),
-                Text(type.displayName),
+                Text(
+                  type.displayName,
+                  style: TextStyle(
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    fontSize: 16,
+                  ),
+                ),
               ],
             ),
           );
@@ -419,41 +447,75 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
     Function(String)? onChanged,
     bool isRequired = true,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      onChanged: onChanged,
+      style: TextStyle(
+        fontSize: 18,
+        color: isDark ? Colors.white : Colors.black,
+        fontWeight: FontWeight.w600,
+        decoration: TextDecoration.none,
       ),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        onChanged: onChanged,
-        style: const TextStyle(fontSize: 16, color: AppColors.textDark),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: AppColors.textLight.withValues(alpha: 0.6),
-          ),
-          prefixIcon: Icon(icon, color: const Color(0xFF9D84FF), size: 22),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(18),
+      cursorColor: const Color(0xFF9D84FF),
+      cursorWidth: 2,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: isDark ? const Color(0xFF252538) : Colors.white,
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: isDark ? Colors.white60 : Colors.black45,
+          fontSize: 16,
+          fontWeight: FontWeight.normal,
         ),
-        validator: isRequired ? (value) {
-          if (value == null || value.isEmpty) {
-            return 'Bu alan zorunludur';
-          }
-          return null;
-        } : null,
+        prefixIcon: Icon(icon, color: const Color(0xFF9D84FF), size: 22),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF3A3A4E) : const Color(0xFFE8E8E8),
+            width: 1,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF3A3A4E) : const Color(0xFFE8E8E8),
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(
+            color: Color(0xFF9D84FF),
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(
+            color: Colors.red,
+            width: 1,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(
+            color: Colors.red,
+            width: 2,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       ),
+      validator: isRequired ? (value) {
+        if (value == null || value.isEmpty) {
+          return 'Bu alan zorunludur';
+        }
+        return null;
+      } : null,
     );
   }
 
@@ -485,6 +547,9 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
   }
 
   Widget _buildFrequencyOption(String label, bool value, Function(bool) onChanged) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return GestureDetector(
       onTap: () => onChanged(!value),
       child: Container(
@@ -495,10 +560,10 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
                   colors: [Color(0xFF9D84FF), Color(0xFFB8A4FF)],
                 )
               : null,
-          color: value ? null : Colors.white,
+          color: value ? null : (isDark ? AppColors.darkCardBg : Colors.white),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: value ? Colors.transparent : const Color(0xFFE8E8E8),
+            color: value ? Colors.transparent : (isDark ? AppColors.darkBorder : const Color(0xFFE8E8E8)),
           ),
         ),
         child: Row(
@@ -514,7 +579,7 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: value ? Colors.white : AppColors.textDark,
+                color: value ? Colors.white : theme.textTheme.bodyLarge?.color,
               ),
             ),
           ],
@@ -524,6 +589,9 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
   }
 
   Widget _buildDateSelector() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return GestureDetector(
       onTap: () async {
         final date = await showDatePicker(
@@ -541,9 +609,9 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppColors.darkCardBg : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE8E8E8)),
+          border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE8E8E8)),
         ),
         child: Row(
           children: [
@@ -551,7 +619,11 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
             const SizedBox(width: 12),
             Text(
               '${_startDate.day}/${_startDate.month}/${_startDate.year}',
-              style: const TextStyle(fontSize: 16, color: AppColors.textDark),
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.textTheme.bodyLarge?.color,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -560,6 +632,9 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
   }
 
   Widget _buildCalculationSummary() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -602,12 +677,16 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Automatic Planning',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
+              Flexible(
+                child: Text(
+                  'Automatic Planning',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: theme.textTheme.bodyLarge?.color,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -616,15 +695,22 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? AppColors.darkCardBg : Colors.white,
               borderRadius: BorderRadius.circular(12),
+              boxShadow: isDark ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ] : null,
             ),
             child: Column(
               children: [
                 _buildSummaryRow('Total usage', '$_calculatedIntakes times', Icons.repeat),
-                const Divider(height: 20),
+                Divider(height: 20, color: isDark ? AppColors.darkBorder : null),
                 _buildSummaryRow('Duration', '$_calculatedDays days', Icons.calendar_today),
-                const Divider(height: 20),
+                Divider(height: 20, color: isDark ? AppColors.darkBorder : null),
                 _buildSummaryRow('End date', _getEndDate(), Icons.event),
               ],
             ),
@@ -648,6 +734,8 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
                       color: const Color(0xFF06D6A0).withValues(alpha: 0.9),
                       fontWeight: FontWeight.w500,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -666,18 +754,25 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: AppColors.textLight,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF9D84FF),
+        Flexible(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF9D84FF),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
           ),
         ),
       ],
@@ -690,19 +785,22 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
   }
 
   Widget _buildWeeklyScheduleToggle() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkCardBg : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE8E8E8)),
       ),
       child: SwitchListTile(
-        title: const Text(
+        title: Text(
           'Specific days of the week',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: AppColors.textDark,
+            color: theme.textTheme.bodyLarge?.color,
           ),
         ),
         subtitle: Text(
@@ -711,7 +809,7 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
               : 'Use every day',
           style: TextStyle(
             fontSize: 13,
-            color: AppColors.textLight,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         value: _useWeeklySchedule,
@@ -727,6 +825,9 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
   }
 
   Widget _buildWeekDaySelector() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     const weekDays = [
       {'name': 'Pzt', 'value': 1},
       {'name': 'Sal', 'value': 2},
@@ -740,9 +841,9 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkCardBg : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE8E8E8)),
       ),
       child: Wrap(
         spacing: 8,
@@ -766,12 +867,12 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
               decoration: BoxDecoration(
                 color: isSelected 
                     ? const Color(0xFF9D84FF)
-                    : const Color(0xFFF5F5F5),
+                    : (isDark ? AppColors.darkSurface : const Color(0xFFF5F5F5)),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected
                       ? const Color(0xFF9D84FF)
-                      : const Color(0xFFE8E8E8),
+                      : (isDark ? AppColors.darkBorder : const Color(0xFFE8E8E8)),
                   width: 2,
                 ),
               ),
@@ -781,7 +882,7 @@ class _MedicationAddEnhancedScreenState extends State<MedicationAddEnhancedScree
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? Colors.white : AppColors.textLight,
+                    color: isSelected ? Colors.white : theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),

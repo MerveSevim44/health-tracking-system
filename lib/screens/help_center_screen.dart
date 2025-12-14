@@ -8,20 +8,20 @@ class HelpCenterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Yardım Merkezi',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontSize: 20,
+          style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -37,8 +37,8 @@ class HelpCenterScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.pastelMint,
-                    AppColors.pastelBlue,
+                    theme.colorScheme.secondary.withOpacity(0.7),
+                    theme.colorScheme.primary.withOpacity(0.7),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -53,9 +53,9 @@ class HelpCenterScreen extends StatelessWidget {
                       color: Colors.white.withOpacity(0.3),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.help_outline,
-                      color: AppColors.moodCalm,
+                      color: theme.colorScheme.primary,
                       size: 32,
                     ),
                   ),
@@ -67,7 +67,7 @@ class HelpCenterScreen extends StatelessWidget {
                         Text(
                           'Size Nasıl Yardımcı Olabiliriz?',
                           style: AppTextStyles.headlineMedium.copyWith(
-                            color: AppColors.textDark,
+                            color: theme.colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -75,7 +75,7 @@ class HelpCenterScreen extends StatelessWidget {
                         Text(
                           'Sorularınızın cevaplarını burada bulabilirsiniz',
                           style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textMedium,
+                            color: theme.colorScheme.onSecondaryContainer,
                           ),
                         ),
                       ],
@@ -94,6 +94,7 @@ class HelpCenterScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             _buildFAQItem(
+              context: context,
               question: 'Su takibini nasıl kullanırım?',
               answer:
                   'Su takibi özelliğini kullanmak için ana sayfadaki su ikonuna tıklayın. Su hedefinizi belirleyebilir, günlük su tüketiminizi kaydedebilir ve ilerlemenizi takip edebilirsiniz.',
@@ -101,6 +102,7 @@ class HelpCenterScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             _buildFAQItem(
+              context: context,
               question: 'İlaç hatırlatıcıları nasıl çalışır?',
               answer:
                   'İlaç hatırlatıcıları ayarlar bölümünden aktif edilebilir. İlaç ekledikten sonra, belirlediğiniz saatlerde size bildirim gönderilir.',
@@ -108,6 +110,7 @@ class HelpCenterScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             _buildFAQItem(
+              context: context,
               question: 'Ruh halimi nasıl kaydedebilirim?',
               answer:
                   'Ana sayfada bulunan + butonuna tıklayarak ruh halinizi seçebilir ve kaydedebilirsiniz. Günlük ruh hali kayıtlarınızı haftalık dashboard\'ta görebilirsiniz.',
@@ -115,6 +118,7 @@ class HelpCenterScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             _buildFAQItem(
+              context: context,
               question: 'Profil bilgilerimi nasıl düzenleyebilirim?',
               answer:
                   'Ayarlar sayfasından "Profili Düzenle" butonuna tıklayarak kullanıcı adı ve e-posta adresinizi değiştirebilirsiniz.',
@@ -122,6 +126,7 @@ class HelpCenterScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             _buildFAQItem(
+              context: context,
               question: 'Su hedefimi nasıl değiştiririm?',
               answer:
                   'Ayarlar sayfasında "Sağlık ve Hedefler" bölümünden "Su Hedefi" seçeneğine tıklayarak günlük su hedefinizi değiştirebilirsiniz.',
@@ -138,11 +143,11 @@ class HelpCenterScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.cardBackground,
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.textLight.withOpacity(0.1),
+                    color: theme.shadowColor.withOpacity(0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -152,6 +157,7 @@ class HelpCenterScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildContactItem(
+                    context: context,
                     icon: Icons.email_outlined,
                     title: 'E-posta',
                     subtitle: 'destek@healthtracking.com',
@@ -161,6 +167,7 @@ class HelpCenterScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildContactItem(
+                    context: context,
                     icon: Icons.phone_outlined,
                     title: 'Telefon',
                     subtitle: '+90 (212) 555-0123',
@@ -170,6 +177,7 @@ class HelpCenterScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildContactItem(
+                    context: context,
                     icon: Icons.chat_bubble_outline,
                     title: 'Canlı Destek',
                     subtitle: 'Hemen sohbet başlat',
@@ -186,14 +194,14 @@ class HelpCenterScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.pastelYellow.withOpacity(0.5),
+                color: theme.colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.access_time,
-                    color: AppColors.moodHappy,
+                    color: theme.colorScheme.primary,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
@@ -209,7 +217,7 @@ class HelpCenterScreen extends StatelessWidget {
                         Text(
                           'Pazartesi - Cuma: 09:00 - 18:00\nCumartesi: 10:00 - 16:00',
                           style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textMedium,
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -226,17 +234,19 @@ class HelpCenterScreen extends StatelessWidget {
   }
 
   Widget _buildFAQItem({
+    required BuildContext context,
     required String question,
     required String answer,
   }) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textLight.withOpacity(0.1),
+            color: theme.shadowColor.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -250,12 +260,12 @@ class HelpCenterScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.moodCalm.withOpacity(0.2),
+                  color: theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.question_mark,
-                  color: AppColors.moodCalm,
+                  color: theme.colorScheme.primary,
                   size: 20,
                 ),
               ),
@@ -274,7 +284,7 @@ class HelpCenterScreen extends StatelessWidget {
           Text(
             answer,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textMedium,
+              color: theme.colorScheme.onSurfaceVariant,
               height: 1.5,
             ),
           ),
@@ -284,11 +294,13 @@ class HelpCenterScreen extends StatelessWidget {
   }
 
   Widget _buildContactItem({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -299,12 +311,12 @@ class HelpCenterScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.moodCalm.withOpacity(0.2),
+                color: theme.colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                color: AppColors.moodCalm,
+                color: theme.colorScheme.primary,
                 size: 24,
               ),
             ),
@@ -323,16 +335,16 @@ class HelpCenterScreen extends StatelessWidget {
                   Text(
                     subtitle,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textMedium,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: AppColors.textLight,
+              color: theme.colorScheme.outline,
             ),
           ],
         ),

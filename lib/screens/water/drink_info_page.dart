@@ -16,7 +16,7 @@ class DrinkInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.lightBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -74,7 +74,7 @@ class DrinkInfoPage extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
+            icon: const Icon(Icons.arrow_back, color: AppColors.lightTextPrimary),
             onPressed: () => Navigator.pop(context),
           ),
           const SizedBox(width: 8),
@@ -83,7 +83,7 @@ class DrinkInfoPage extends StatelessWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
+              color: AppColors.lightTextPrimary,
             ),
           ),
         ],
@@ -124,7 +124,7 @@ class DrinkInfoPage extends StatelessWidget {
         style: const TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
-          color: AppColors.textDark,
+          color: AppColors.lightTextPrimary,
         ),
       ),
     );
@@ -149,7 +149,7 @@ class DrinkInfoPage extends StatelessWidget {
         style: const TextStyle(
           fontSize: 16,
           height: 1.6,
-          color: AppColors.textMedium,
+          color: AppColors.lightTextSecondary,
         ),
         textAlign: TextAlign.center,
       ),
@@ -186,7 +186,7 @@ class DrinkInfoPage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
+                  color: AppColors.lightTextPrimary,
                 ),
               ),
             ],
@@ -223,7 +223,7 @@ class DrinkInfoPage extends StatelessWidget {
             '$percentage% as hydrating as water',
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textMedium,
+              color: AppColors.lightTextSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -295,7 +295,7 @@ class DrinkInfoPage extends StatelessWidget {
                         item,
                         style: const TextStyle(
                           fontSize: 15,
-                          color: AppColors.textDark,
+                          color: AppColors.lightTextPrimary,
                           height: 1.5,
                         ),
                       ),
@@ -344,7 +344,7 @@ class DrinkInfoPage extends StatelessWidget {
                   'Recommended Daily',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textMedium,
+                    color: AppColors.lightTextSecondary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -353,7 +353,7 @@ class DrinkInfoPage extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
+                    color: AppColors.lightTextPrimary,
                   ),
                 ),
               ],

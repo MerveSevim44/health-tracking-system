@@ -6,6 +6,7 @@ import 'package:health_care/models/drink_type_info.dart';
 import 'package:health_care/models/custom_drink_model.dart';
 import 'package:health_care/providers/drink_provider.dart';
 import 'package:health_care/theme/water_theme.dart';
+import 'package:health_care/theme/modern_colors.dart';
 import 'package:health_care/widgets/water/dynamic_drink_blob.dart';
 import 'package:health_care/widgets/water/drink_selector.dart';
 import 'package:health_care/widgets/water/selected_drink_display.dart';
@@ -149,8 +150,15 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
 
         return Scaffold(
           body: Container(
-            decoration: const BoxDecoration(
-              gradient: WaterColors.screenGradient,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  ModernAppColors.darkBg,
+                  ModernAppColors.cardBg,
+                ],
+              ),
             ),
             child: SafeArea(
               child: SingleChildScrollView(
@@ -158,19 +166,75 @@ class _WaterHomeScreenState extends State<WaterHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header with profile and notification
-                    _buildHeader(),
+                    // ✅ BACK BUTTON
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.arrow_back, color: ModernAppColors.lightText),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Water Tracking',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: ModernAppColors.lightText,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 24),
 
                     // Week day selector
                     _buildWeekCalendar(waterModel),
                     const SizedBox(height: 24),
 
-                    // Seçili içecek adı gösterimi
+                    // ✅ SELECTED DRINK CLARITY (Highlighted & Clear)
                     Center(
-                      child: SelectedDrinkDisplay(
-                        drinkType: DrinkTypes.defaults[_selectedDrinkIndex],
-                        onTap: () => _showDrinkInfo(_selectedDrinkIndex),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              ModernAppColors.vibrantCyan,
+                              ModernAppColors.electricBlue,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: ModernAppColors.vibrantCyan.withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.water_drop,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              DrinkTypes.defaults[_selectedDrinkIndex].name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.white.withOpacity(0.8),
+                              size: 18,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),

@@ -78,40 +78,89 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    
     return Dialog(
       backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: screenHeight * 0.85,
+        ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF1A1A2E),
+              Color(0xFF0F0F1E),
+              Color(0xFF252538),
+            ],
+          ),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: WaterShadows.card,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            ),
+            BoxShadow(
+              color: WaterColors.waterPrimary.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               decoration: BoxDecoration(
-                color: WaterColors.waterLight.withValues(alpha: 0.3),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    WaterColors.cardBackground,
+                    WaterColors.cardBackground.withOpacity(0.8),
+                  ],
+                ),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(24),
                   topRight: Radius.circular(24),
                 ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: WaterColors.waterPrimary.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.add_circle_outline, size: 28),
+                  Icon(
+                    Icons.add_circle_outline,
+                    size: 26,
+                    color: WaterColors.waterPrimary,
+                  ),
                   const SizedBox(width: 12),
                   Text(
                     'Add Custom Drink',
-                    style: WaterTextStyles.headlineMedium,
+                    style: WaterTextStyles.headlineMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: WaterColors.waterPrimary,
+                    ),
                     onPressed: () => Navigator.pop(context),
+                    splashRadius: 20,
                   ),
                 ],
               ),
@@ -120,7 +169,8 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
             // Form
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -131,6 +181,13 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
                       TextFormField(
                         controller: _nameController,
                         decoration: _inputDecoration('e.g., Linden Tea'),
+                        style: WaterTextStyles.bodyMedium.copyWith(
+                          color: WaterColors.textDark,
+                        ),
+                        onChanged: (value) {
+                          // Trigger icon animation when name changes
+                          if (mounted) setState(() {});
+                        },
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Please enter a drink name';
@@ -138,17 +195,40 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 22),
 
                       // Category
                       _buildLabel('Category'),
                       DropdownButtonFormField<String>(
                         value: _selectedCategory,
                         decoration: _inputDecoration('Select category'),
+                        dropdownColor: const Color(0xFF1A1A2E),
+                        style: WaterTextStyles.bodyMedium.copyWith(
+                          color: WaterColors.textDark,
+                          fontSize: 14,
+                        ),
+                        icon: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: WaterColors.waterPrimary,
+                        ),
                         items: _categories.map((cat) {
                           return DropdownMenuItem(
                             value: cat,
-                            child: Text(cat[0].toUpperCase() + cat.substring(1)),
+                            child: Row(
+                              children: [
+                                Text(
+                                  DrinkIconGenerator.generateIcon(cat),
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  cat[0].toUpperCase() + cat.substring(1),
+                                  style: TextStyle(
+                                    color: WaterColors.textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -158,37 +238,71 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
                             _selectedColor = null;
                           });
                         },
+                        selectedItemBuilder: (context) {
+                          return _categories.map((cat) {
+                            return Row(
+                              children: [
+                                Text(
+                                  DrinkIconGenerator.generateIcon(cat),
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  cat[0].toUpperCase() + cat.substring(1),
+                                  style: TextStyle(
+                                    color: WaterColors.textDark,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList();
+                        },
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
                       // Icon Preview
                       _buildLabel('Icon Preview'),
                       Center(
-                        child: Container(
-                          width: 80,
-                          height: 80,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          width: 90,
+                          height: 90,
                           decoration: BoxDecoration(
-                            color: (_selectedColor ?? DrinkIconGenerator.generateColor(_selectedCategory))
-                                .withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: _selectedColor ?? DrinkIconGenerator.generateColor(_selectedCategory),
-                              width: 2,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                (_selectedColor ?? DrinkIconGenerator.generateColor(_selectedCategory)),
+                                (_selectedColor ?? DrinkIconGenerator.generateColor(_selectedCategory)).withOpacity(0.6),
+                              ],
                             ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: (_selectedColor ?? DrinkIconGenerator.generateColor(_selectedCategory))
+                                    .withOpacity(0.4),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
                           child: Center(
                             child: Text(
                               _selectedIcon ?? DrinkIconGenerator.generateIcon(_selectedCategory),
-                              style: const TextStyle(fontSize: 40),
+                              style: const TextStyle(fontSize: 44),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Center(
                         child: Text(
                           'Auto-generated icon',
-                          style: WaterTextStyles.labelSmall,
+                          style: WaterTextStyles.labelSmall.copyWith(
+                            fontSize: 11,
+                            color: WaterColors.textLight.withOpacity(0.5),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -197,8 +311,14 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
                       _buildLabel('Benefits (Optional)'),
                       TextFormField(
                         controller: _benefitsController,
-                        decoration: _inputDecoration('e.g., calms, supports immunity'),
+                        decoration: _inputDecoration('e.g., calms, supports immunity').copyWith(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                        ),
                         maxLines: 2,
+                        style: WaterTextStyles.bodyMedium.copyWith(
+                          color: WaterColors.textDark,
+                          height: 1.4,
+                        ),
                       ),
                       const SizedBox(height: 20),
 
@@ -206,27 +326,64 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
                       _buildLabel('Potential Side Effects (Optional)'),
                       TextFormField(
                         controller: _harmsController,
-                        decoration: _inputDecoration('e.g., excessive use may cause dizziness'),
+                        decoration: _inputDecoration('e.g., excessive use may cause dizziness').copyWith(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            borderSide: BorderSide(
+                              color: const Color(0xFFFF9F43).withOpacity(0.15),
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            borderSide: BorderSide(
+                              color: const Color(0xFFFF9F43).withOpacity(0.5),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
                         maxLines: 2,
+                        style: WaterTextStyles.bodyMedium.copyWith(
+                          color: WaterColors.textDark,
+                          height: 1.4,
+                        ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 22),
 
                       // Recommended Daily Intake
                       _buildLabel('Recommended Daily Intake'),
                       TextFormField(
                         controller: _recommendedController,
                         decoration: _inputDecoration('e.g., 1-2 cups'),
+                        style: WaterTextStyles.bodyMedium.copyWith(
+                          color: WaterColors.textDark,
+                        ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 28),
 
                       // Submit Button
-                      BluePrimaryButton(
-                        text: 'Add Drink',
-                        onPressed: _handleSubmit,
-                        width: double.infinity,
-                        icon: Icons.check,
-                        color: _selectedColor ?? DrinkIconGenerator.generateColor(_selectedCategory),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_selectedColor ?? DrinkIconGenerator.generateColor(_selectedCategory))
+                                  .withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: BluePrimaryButton(
+                          text: 'Add Drink',
+                          onPressed: _handleSubmit,
+                          width: double.infinity,
+                          icon: Icons.check_circle_outline,
+                          color: _selectedColor ?? DrinkIconGenerator.generateColor(_selectedCategory),
+                        ),
                       ),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
@@ -240,11 +397,13 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
 
   Widget _buildLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         text,
         style: WaterTextStyles.labelLarge.copyWith(
           fontWeight: FontWeight.w600,
+          color: WaterColors.textDark,
+          letterSpacing: 0.3,
         ),
       ),
     );
@@ -254,33 +413,46 @@ class _AddCustomDrinkModalState extends State<AddCustomDrinkModal> {
     return InputDecoration(
       hintText: hint,
       hintStyle: WaterTextStyles.bodyMedium.copyWith(
-        color: WaterColors.textLight,
+        color: WaterColors.textLight.withOpacity(0.6),
+        fontSize: 13.5,
       ),
       filled: true,
-      fillColor: WaterColors.cardBackground,
+      fillColor: const Color(0xFF0F0F1E),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(
-          color: WaterColors.waterPrimary,
-          width: 2,
+          color: WaterColors.waterPrimary.withOpacity(0.6),
+          width: 1.5,
         ),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: Colors.red,
-          width: 2,
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: const Color(0xFFFF6B9D).withOpacity(0.6),
+          width: 1.5,
         ),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(
+          color: Color(0xFFFF6B9D),
+          width: 1.5,
+        ),
+      ),
+      errorStyle: TextStyle(
+        color: const Color(0xFFFF6B9D),
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
     );
   }
 }

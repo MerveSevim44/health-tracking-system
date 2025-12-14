@@ -60,10 +60,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
     );
     
-    // Pulse animation for logo glow
+    // Pulse animation for logo glow (slower, softer)
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2500),
     )..repeat(reverse: true);
     
     // Rotate animation for background elements
@@ -113,8 +113,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     final user = FirebaseAuth.instance.currentUser;
     
     if (user != null) {
-      // User is logged in, go to home
-      Navigator.pushReplacementNamed(context, '/home');
+      // User is logged in, go to auth wrapper (mood check-in control)
+      Navigator.pushReplacementNamed(context, '/auth-wrapper');
     } else {
       // User is not logged in, go to landing page
       Navigator.pushReplacementNamed(context, '/landing');
@@ -311,44 +311,63 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           animation: _pulseController,
           builder: (context, child) {
             return Container(
-              width: 160,
-              height: 160,
+              width: 170,
+              height: 170,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                gradient: RadialGradient(
                   colors: [
-                    AppColors.deepPurple,
-                    AppColors.vibrantCyan,
+                    AppColors.deepPurple.withOpacity(0.4),
+                    AppColors.vibrantCyan.withOpacity(0.2),
+                    Colors.transparent,
                   ],
+                  stops: const [0.0, 0.6, 1.0],
                 ),
                 boxShadow: [
+                  // Softer, more natural glow
                   BoxShadow(
-                    color: AppColors.deepPurple.withOpacity(0.5 + _pulseController.value * 0.3),
-                    blurRadius: 40 + (_pulseController.value * 20),
-                    spreadRadius: 5,
+                    color: AppColors.deepPurple.withOpacity(0.25 + _pulseController.value * 0.15),
+                    blurRadius: 35 + (_pulseController.value * 10),
+                    spreadRadius: 0,
                   ),
                   BoxShadow(
-                    color: AppColors.vibrantCyan.withOpacity(0.3 + _pulseController.value * 0.2),
-                    blurRadius: 30 + (_pulseController.value * 15),
-                    spreadRadius: 3,
+                    color: AppColors.vibrantCyan.withOpacity(0.2 + _pulseController.value * 0.1),
+                    blurRadius: 25 + (_pulseController.value * 8),
+                    spreadRadius: 0,
                   ),
                 ],
               ),
-              child: Center(
-                child: Image.asset(
-                  'assets/images/logo.jpg',
-                  width: 140,
-                  height: 140,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.favorite_rounded,
-                      size: 80,
-                      color: AppColors.lightText,
-                    );
-                  },
+              child: Padding(
+                padding: const EdgeInsets.all(20.0), // Daha fazla nefes alanı
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.95), // Hafif opak beyaz
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18.0), // Logo için iç padding
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high, // Daha net görünüm
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.favorite_rounded,
+                            size: 60,
+                            color: AppColors.deepPurple,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
               ),
             );
@@ -371,10 +390,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         child: const Text(
           'MINOA',
           style: TextStyle(
-            fontSize: 56,
-            fontWeight: FontWeight.bold,
+            fontSize: 52,
+            fontWeight: FontWeight.w700, // Semi-bold
             color: AppColors.lightText,
-            letterSpacing: 4,
+            letterSpacing: 2, // Azaltıldı
           ),
         ),
       ),
@@ -383,18 +402,18 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   
   Widget _buildTagline() {
     return FadeTransition(
-      opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+      opacity: Tween<double>(begin: 0.0, end: 0.7).animate(
         CurvedAnimation(
           parent: _fadeController,
           curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
         ),
       ),
-      child: const Text(
+      child: Text(
         'Your Health Companion',
         style: TextStyle(
-          fontSize: 16,
-          color: AppColors.mutedText,
-          letterSpacing: 1.5,
+          fontSize: 14,
+          color: AppColors.mutedText.withOpacity(0.8),
+          letterSpacing: 1.2,
           fontWeight: FontWeight.w300,
         ),
       ),
@@ -406,71 +425,76 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       padding: const EdgeInsets.symmetric(horizontal: 60.0),
       child: Column(
         children: [
-          // Modern progress bar with gradient
+          // Modern progress bar with enhanced gradient
           AnimatedBuilder(
             animation: _progressAnimation,
             builder: (context, child) {
               return Container(
-                height: 5,
+                height: 6,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: AppColors.cardBg,
+                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.cardBg.withOpacity(0.5),
+                  border: Border.all(
+                    color: AppColors.deepPurple.withOpacity(0.1),
+                    width: 0.5,
+                  ),
                 ),
-                child: Stack(
-                  children: [
-                    // Progress fill
-                    FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: _progressAnimation.value,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.deepPurple,
-                              AppColors.vibrantCyan,
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.deepPurple.withOpacity(0.5),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Animated shine effect
-                    if (_progressAnimation.value > 0.1)
-                      Positioned(
-                        left: (_progressAnimation.value * MediaQuery.of(context).size.width * 0.7) - 50,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      // Progress fill with gradient
+                      FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: _progressAnimation.value,
                         child: Container(
-                          width: 30,
-                          height: 5,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
                             gradient: LinearGradient(
                               colors: [
-                                Colors.white.withOpacity(0.0),
-                                Colors.white.withOpacity(0.5),
-                                Colors.white.withOpacity(0.0),
+                                AppColors.deepPurple,
+                                AppColors.vibrantCyan,
                               ],
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.vibrantCyan.withOpacity(0.6),
+                                blurRadius: 12,
+                                offset: const Offset(0, 0),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                  ],
+                      // Enhanced shimmer effect
+                      if (_progressAnimation.value > 0.05)
+                        Positioned(
+                          left: (_progressAnimation.value * MediaQuery.of(context).size.width * 0.65) - 40,
+                          child: Container(
+                            width: 40,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.white.withOpacity(0.0),
+                                  Colors.white.withOpacity(0.7),
+                                  Colors.white.withOpacity(0.0),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               );
             },
           ),
           
-          const SizedBox(height: 25),
+          const SizedBox(height: 20),
           
-          // Loading text with fade
+          // Loading text with reduced opacity
           FadeTransition(
-            opacity: Tween<double>(begin: 0.0, end: 0.7).animate(
+            opacity: Tween<double>(begin: 0.0, end: 0.4).animate(
               CurvedAnimation(
                 parent: _progressController,
                 curve: const Interval(0.3, 0.8),
@@ -480,8 +504,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               'LOADING',
               style: TextStyle(
                 color: AppColors.mutedText,
-                fontSize: 12,
-                letterSpacing: 4,
+                fontSize: 11,
+                letterSpacing: 3,
                 fontWeight: FontWeight.w300,
               ),
             ),

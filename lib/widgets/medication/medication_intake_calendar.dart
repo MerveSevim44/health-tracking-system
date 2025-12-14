@@ -79,7 +79,7 @@ class _MedicationIntakeCalendarState extends State<MedicationIntakeCalendar> {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
+            color: AppColors.lightTextPrimary,
           ),
         ),
         IconButton(
@@ -175,7 +175,7 @@ class _MedicationIntakeCalendarState extends State<MedicationIntakeCalendar> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-                color: hasScheduled ? AppColors.textDark : AppColors.textLight,
+                color: hasScheduled ? AppColors.lightTextPrimary : AppColors.lightTextTertiary,
               ),
             ),
             if (hasScheduled) ...[

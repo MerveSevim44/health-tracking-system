@@ -117,8 +117,9 @@ class _MoodCheckinDialogState extends State<MoodCheckinDialog>
         sentiment: 'positive',
       );
 
-      // 4. Add AI response to mood (using static advice)
-      final moodResponse = aiCoachService.generateMoodResponse(
+      // 4. Add AI response to mood (using Gemini AI)
+      // Service handles all errors and returns fallback message - never throws
+      final moodResponse = await aiCoachService.generateMoodResponse(
         moodLevel: _selectedMoodLevel!,
         emotions: _selectedEmotions.toList(),
       );
@@ -152,15 +153,20 @@ class _MoodCheckinDialogState extends State<MoodCheckinDialog>
         }
       }
     } catch (e) {
+      // 🛡️ Silent error logging - this should rarely happen (only Firebase errors)
+      // AI errors are handled by service and return fallback message
+      debugPrint('❌ [Mood Check-in Dialog] Error saving mood (silent): ${e.runtimeType}');
+      
+      // Even if Firebase fails, close dialog and navigate - user experience continues
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving mood: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
         setState(() => _isSaving = false);
+        
+        // Close dialog and continue - user can still use the app
+        Navigator.of(context).pop();
+        
+        if (widget.onComplete != null) {
+          widget.onComplete!();
+        }
       }
     }
   }
@@ -226,7 +232,7 @@ class _MoodCheckinDialogState extends State<MoodCheckinDialog>
                               size: 28,
                             ),
                             const SizedBox(width: 12),
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 'How are you today?',
                                 style: TextStyle(
@@ -234,6 +240,8 @@ class _MoodCheckinDialogState extends State<MoodCheckinDialog>
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             IconButton(
@@ -314,6 +322,8 @@ class _MoodCheckinDialogState extends State<MoodCheckinDialog>
                                                   : FontWeight.w400,
                                               color: ModernAppColors.lightText,
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
@@ -377,14 +387,18 @@ class _MoodCheckinDialogState extends State<MoodCheckinDialog>
                                             style: const TextStyle(fontSize: 16),
                                           ),
                                           const SizedBox(width: 4),
-                                          Text(
-                                            entry.key,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: isSelected
-                                                  ? FontWeight.w600
-                                                  : FontWeight.w400,
-                                              color: ModernAppColors.lightText,
+                                          Flexible(
+                                            child: Text(
+                                              entry.key,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w600
+                                                    : FontWeight.w400,
+                                                color: ModernAppColors.lightText,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                         ],
@@ -439,3 +453,5 @@ class _MoodCheckinDialogState extends State<MoodCheckinDialog>
     );
   }
 }
+
+
