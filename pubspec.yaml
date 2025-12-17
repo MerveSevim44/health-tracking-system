@@ -31,11 +31,7 @@ dependencies:
   intl: ^0.19.0
   shared_preferences: ^2.5.4
   
-  # Gemini AI (Google AI Studio - API Key based)
-  # Latest version with proper API endpoint support
-  google_generative_ai: ^0.4.7
-  
-  # Environment variables
+  # Environment variables (optional for Firebase)
   flutter_dotenv: ^5.1.0
   
   # Local Notifications

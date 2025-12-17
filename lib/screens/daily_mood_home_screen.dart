@@ -5,7 +5,6 @@ import 'package:health_care/services/water_service.dart';
 import 'package:health_care/services/medication_service.dart';
 import 'package:health_care/services/sleep_service.dart';
 import 'package:health_care/services/mood_service.dart';
-import 'package:health_care/models/sleep_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -130,29 +129,24 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
     }
   }
 
+  // Data source: Firebase → sleep_logs/{uid}/{YYYY-MM-DD}
   Future<void> _loadSleepData() async {
     try {
-      // Get yesterday's sleep (last night)
-      final yesterday = DateTime.now().subtract(const Duration(days: 1));
-      final yesterdayStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
-      final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+      // Check today's sleep first, then yesterday's (most recent)
+      final recentSleep = await _sleepService.getRecentSleep();
       
-      final sleepLogs = await _sleepService.getSleepForDateRange(yesterdayStart, yesterdayEnd);
-      
-      if (sleepLogs.isNotEmpty) {
-        // Get the most recent sleep log for yesterday
-        final sleepLog = sleepLogs.first;
-        
+      if (recentSleep != null) {
         if (mounted) {
           setState(() {
-            _sleepDuration = sleepLog.formattedDuration;
+            _sleepDuration = recentSleep.formattedDuration;
           });
           debugPrint("Sleep last night: $_sleepDuration");
         }
       } else {
+        // No sleep data for today or yesterday
         if (mounted) {
           setState(() {
-            _sleepDuration = 'No data';
+            _sleepDuration = 'No sleep data logged';
           });
         }
       }
@@ -160,12 +154,13 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
       debugPrint('Error loading sleep data: $e');
       if (mounted) {
         setState(() {
-          _sleepDuration = 'No data';
+          _sleepDuration = 'No sleep data logged';
         });
       }
     }
   }
 
+  // Data source: Firebase → moods/{uid}/{YYYY-MM-DD}/emotions[]
   Future<void> _loadEmotionDistribution() async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -189,7 +184,17 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
       // Calculate total emotions
       final totalEmotions = emotionFrequency.values.fold<int>(0, (sum, count) => sum + count);
       
-      // Calculate percentages
+      // If no emotions found, return empty
+      if (totalEmotions == 0) {
+        if (mounted) {
+          setState(() {
+            _emotionDistribution = {};
+          });
+        }
+        return;
+      }
+
+      // Calculate percentages: (emotion_count / total_emotion_count) * 100
       final Map<String, double> distribution = {};
       emotionFrequency.forEach((emotion, count) {
         distribution[emotion] = (count / totalEmotions) * 100;
@@ -739,9 +744,13 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _sleepDuration,
-                        style: const TextStyle(
-                          color: ModernAppColors.mutedText,
+                        _sleepDuration == 'No sleep data logged' 
+                          ? 'No data' 
+                          : _sleepDuration,
+                        style: TextStyle(
+                          color: _sleepDuration == 'No sleep data logged'
+                            ? ModernAppColors.mutedText.withOpacity(0.7)
+                            : ModernAppColors.mutedText,
                           fontSize: 14,
                         ),
                       ),
@@ -751,10 +760,12 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
               ],
             ),
             const SizedBox(height: 12),
-            const Text(
-              "Last night's sleep",
+            Text(
+              _sleepDuration == 'No sleep data logged'
+                ? 'Tap to log your sleep'
+                : "Last night's sleep",
               style: TextStyle(
-                color: ModernAppColors.mutedText,
+                color: ModernAppColors.mutedText.withOpacity(0.8),
                 fontSize: 12,
               ),
             ),
@@ -765,14 +776,6 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
   }
 
   Widget _buildEmotionDistribution() {
-    if (_emotionDistribution.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    // Sort by percentage (descending) and take top emotions
-    final sortedEmotions = _emotionDistribution.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -785,50 +788,100 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
           ),
         ),
         const SizedBox(height: 16),
-        ...sortedEmotions.take(5).map((entry) {
-          final emotion = entry.key;
-          final percentage = entry.value.toInt();
-          
-          // Get emotion color (use predefined colors or default)
-          Color emotionColor = _getEmotionColor(emotion);
-          
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                // Color dot
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: emotionColor,
-                    shape: BoxShape.circle,
+        
+        // Show message if no data
+        if (_emotionDistribution.isEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: ModernAppColors.cardBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: ModernAppColors.mutedText.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.analytics_outlined,
+                    size: 48,
+                    color: ModernAppColors.mutedText.withOpacity(0.5),
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Label
-                Expanded(
-                  child: Text(
-                    _capitalizeEmotion(emotion),
-                    style: const TextStyle(
-                      color: ModernAppColors.lightText,
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No mood data yet',
+                    style: TextStyle(
+                      color: ModernAppColors.mutedText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Track your moods to see patterns',
+                    style: TextStyle(
+                      color: ModernAppColors.mutedText.withOpacity(0.7),
                       fontSize: 14,
                     ),
                   ),
-                ),
-                // Percentage
-                Text(
-                  '$percentage%',
-                  style: const TextStyle(
-                    color: ModernAppColors.mutedText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          );
-        }).toList(),
+          ),
+        ] else ...[
+          // Sort by percentage (descending) and take top emotions
+          ...() {
+            final sortedEmotions = _emotionDistribution.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value));
+            
+            return sortedEmotions.take(5).map((entry) {
+              final emotion = entry.key;
+              final percentage = entry.value;
+              
+              // Get emotion color (use predefined colors or default)
+              Color emotionColor = _getEmotionColor(emotion);
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    // Color dot
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: emotionColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Label
+                    Expanded(
+                      child: Text(
+                        _capitalizeEmotion(emotion),
+                        style: const TextStyle(
+                          color: ModernAppColors.lightText,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    // Percentage with decimal
+                    Text(
+                      '${percentage.toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                        color: ModernAppColors.mutedText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList();
+          }(),
+        ],
       ],
     );
   }

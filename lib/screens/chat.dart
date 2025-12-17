@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:health_care/theme/theme.dart';
 import 'package:health_care/models/mood_model.dart';
+import 'package:health_care/services/firebase_gemini_service.dart';
 import 'package:provider/provider.dart';
 
 // --- Veri Modeli ---
@@ -27,24 +26,29 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
 
-  // Gerçek API URL'si buraya gelmelidir. (Örn: Gemini API)
-  static const String _geminiApiUrl = 'YOUR_API_ENDPOINT_HERE';
-  static const String _apiKey = 'YOUR_API_KEY_HERE';
-
-  // Ruha Göre Prompt Haritası
-  final Map<int, String> _moodPrompts = {
-    0: "Kullanıcı kendini **Mutlu** hissettiğini belirtti. Cevapların kutlayıcı, neşeli ve pozitif enerjiyi sürdüren bir tonda olmalıdır. Başarısını veya pozitifliğini tebrik et.",
-    1: "Kullanıcı kendini **Sakin** hissettiğini belirtti. Cevapların huzurlu, dinlendirici ve meditasyonu veya şimdiki anı destekleyen bir tonda olmalıdır. Derin düşüncelere yönlendir.",
-    2: "Kullanıcı kendini **Üzgün** hissettiğini belirtti. Cevapların son derece empatik, destekleyici ve yargılayıcı olmayan bir tonda olmalıdır. Onaylayıcı dil kullan (örneğin, 'Hislerinin tamamen doğal olduğunu anlıyorum.'). Çözüm sunmak yerine dinlemeye odaklan.",
-    3: "Kullanıcı kendini **Kaygılı** hissettiğini belirtti. Cevapların güven verici, sakinleştirici ve somut başa çıkma stratejilerine (nefes egzersizi, topraklanma teknikleri) odaklanan bir tonda olmalıdır. Kısa ve net cümleler kur, uzun cevaplardan kaçın.",
-    4: "Kullanıcı kendini **Kızgın** hissettiğini belirtti. Cevapların sabırlı, nötr ve duyguyu kabul eden bir tonda olmalıdır. Sakinleşmesine yardımcı olacak adımlar önerebilir veya sadece duygusunu boşaltmasına izin verebilirsin. Asla savunmacı veya itirazcı olma.",
-  };
+  // 🔥 Firebase Gemini Service (NEW)
+  final FirebaseGeminiService _geminiService = FirebaseGeminiService();
 
   @override
   void initState() {
     super.initState();
+    _initializeGemini();
     // Sayfa açıldığında ilk karşılama mesajını gönderelim
     WidgetsBinding.instance.addPostFrameCallback((_) => _sendInitialMessage());
+  }
+
+  void _initializeGemini() {
+    try {
+      // Get user's mood for system instruction
+      final moodModel = Provider.of<MoodModel>(context, listen: false);
+      final selectedMoodIndex = moodModel.selectedMoodIndex;
+      
+      // 🔥 Initialize Firebase Gemini Service with mood-based system instruction
+      _geminiService.initialize(selectedMoodIndex: selectedMoodIndex);
+    } catch (e) {
+      debugPrint('❌ Error initializing Gemini: $e');
+      // Continue anyway - fallback will be used if AI fails
+    }
   }
 
   // --- Metotlar ---
@@ -52,29 +56,14 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendInitialMessage() {
     // MoodModel'i sadece okuma modunda (listen: false) kullanmak initState'te güvenlidir.
     final moodModel = Provider.of<MoodModel>(context, listen: false);
-    final selectedMoodIndex =
-        moodModel.selectedMoodIndex; // MoodModel'den gelen int
+    final selectedMoodIndex = moodModel.selectedMoodIndex;
+    final moodLabel = moodModel.getMoodLabel(selectedMoodIndex);
 
-    String initialPrompt = "";
-
-    // Ruha göre karşılama metni
-    switch (selectedMoodIndex) {
-      case 0: // Mutlu
-        initialPrompt =
-            "Harika! Enerjin bana da geçti! ${moodModel.getMoodLabel(selectedMoodIndex)} hissetmene sevindim. Bugün ne hakkında konuşmak istersin?";
-        break;
-      case 2: // Üzgün
-        initialPrompt =
-            "Merhaba. Bugün kendini ${moodModel.getMoodLabel(selectedMoodIndex)} hissediyormuşsun. Unutma, burası yargılanmadan her şeyi paylaşabileceğin güvenli bir alan. Seni dinlemek için buradayım, nasılsın?";
-        break;
-      case 3: // Kaygılı
-        initialPrompt =
-            "Merhaba, ${moodModel.getMoodLabel(selectedMoodIndex)} hissettiğini görüyorum. Bir nefes al. Şu an ne seni en çok meşgul ediyor? Eğer konuşmak zorsa, sadece 'Buradayım' yazabilirsin.";
-        break;
-      default:
-        initialPrompt =
-            "Merhaba! ${moodModel.getMoodLabel(selectedMoodIndex)} hissettiğini görüyorum. Seni dinliyorum. Bugün konuşmak istediğin konu ne?";
-    }
+    // 🔥 Generate initial message using Firebase Gemini Service
+    final initialPrompt = _geminiService.generateInitialMessage(
+      selectedMoodIndex: selectedMoodIndex,
+      moodLabel: moodLabel,
+    );
 
     setState(() {
       _messages.insert(
@@ -100,76 +89,40 @@ class _ChatScreenState extends State<ChatScreen> {
       _isLoading = true;
     });
 
-    // --- 1. Kullanıcının Ruh Halini ve Prompt'u Al ---
-    final moodModel = Provider.of<MoodModel>(context, listen: false);
-    final selectedMoodIndex = moodModel.selectedMoodIndex;
-
-    // Ruha özel sistem talimatını al
-    final systemPrompt =
-        _moodPrompts[selectedMoodIndex] ??
-        "Sen bir destekleyici yapay zeka asistansın. Daima nazik, empatik ve yargılayıcı olmayan bir tonda cevap ver.";
-
-    // --- 2. API İstek Gövdesinin Hazırlanması (Örnek: Gemini API) ---
     try {
-      final response = await http
-          .post(
-            Uri.parse(_geminiApiUrl),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_apiKey',
-            },
-            body: jsonEncode({
-              'contents': [
-                {
-                  'role': 'system',
-                  'parts': [
-                    {'text': systemPrompt},
-                  ],
-                },
-                {
-                  'role': 'user',
-                  'parts': [
-                    {'text': userMessage},
-                  ],
-                },
-              ],
-              'config': {'temperature': 0.7},
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      // 🔥 Send message to Gemini via Firebase Gemini Service
+      final botResponseText = await _geminiService.sendMessage(userMessage);
 
-      String botResponseText;
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(utf8.decode(response.bodyBytes));
-        botResponseText =
-            responseData['candidates'][0]['content']['parts'][0]['text'];
-      } else {
-        debugPrint('API Hata Kodu: ${response.statusCode}');
-        botResponseText =
-            "Üzgünüm, Yapay Zeka servisine bağlanırken bir sorun oluştu. (Hata Kodu: ${response.statusCode})";
+      if (mounted) {
+        setState(() {
+          _messages.insert(
+            0,
+            ChatMessage(text: botResponseText, type: ChatMessageType.bot),
+          );
+        });
       }
-
-      setState(() {
-        _messages.insert(
-          0,
-          ChatMessage(text: botResponseText, type: ChatMessageType.bot),
-        );
-      });
     } catch (e) {
-      setState(() {
-        _messages.insert(
-          0,
-          ChatMessage(
-            text: "Bir bağlantı hatası oluştu: $e",
-            type: ChatMessageType.bot,
-          ),
-        );
-      });
+      // 🛡️ This should never happen due to internal error handling
+      // But as extra safety, use fallback message
+      debugPrint('❌ Unexpected error in chat: $e');
+      
+      if (mounted) {
+        setState(() {
+          _messages.insert(
+            0,
+            ChatMessage(
+              text: "Bugün kendine küçük bir iyilik yapmayı unutma 🌿",
+              type: ChatMessageType.bot,
+            ),
+          );
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

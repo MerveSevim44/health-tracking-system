@@ -7,9 +7,11 @@ import 'package:health_care/screens/chat.dart';
 import 'package:health_care/screens/sleep_tracking_screen.dart';
 import 'package:health_care/screens/sleep_details_screen.dart';
 import 'package:health_care/services/sleep_service.dart';
+import 'package:health_care/services/mood_service.dart';
 import 'package:health_care/theme/water_theme.dart';
 import 'package:health_care/theme/app_theme.dart';
 import 'package:health_care/utils/page_transitions.dart';
+import 'package:health_care/models/mood_firebase_model.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -69,6 +71,11 @@ class MainContent extends StatelessWidget {
 
           // 4.5 Sleep Tracking Card
           const SleepTrackingCard(),
+
+          const SizedBox(height: 24),
+
+          // 4.6 Emotion Distribution Card
+          const EmotionDistributionCard(),
 
           const SizedBox(height: 24),
 
@@ -547,26 +554,27 @@ class SleepTrackingCard extends StatefulWidget {
 
 class _SleepTrackingCardState extends State<SleepTrackingCard> {
   final SleepService _sleepService = SleepService();
-  SleepLog? _todaySleep;
+  SleepLog? _recentSleep;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadTodaySleep();
+    _loadRecentSleep();
   }
 
-  Future<void> _loadTodaySleep() async {
+  // Data source: Firebase → sleep_logs/{uid}/{YYYY-MM-DD}
+  Future<void> _loadRecentSleep() async {
     try {
-      final sleep = await _sleepService.getTodaySleep();
+      final sleep = await _sleepService.getRecentSleep();
       if (mounted) {
         setState(() {
-          _todaySleep = sleep;
+          _recentSleep = sleep;
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('Error loading today\'s sleep: $e');
+      debugPrint('Error loading recent sleep: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -585,7 +593,7 @@ class _SleepTrackingCardState extends State<SleepTrackingCard> {
           MaterialPageRoute(builder: (context) => const SleepTrackingScreen()),
         );
         if (result == true) {
-          _loadTodaySleep(); // Reload data after logging sleep
+          _loadRecentSleep(); // Reload data after logging sleep
         }
       },
       child: Container(
@@ -647,7 +655,7 @@ class _SleepTrackingCardState extends State<SleepTrackingCard> {
                 ),
                 Row(
                   children: [
-                    if (_todaySleep != null)
+                    if (_recentSleep != null)
                       IconButton(
                         icon: const Icon(Icons.bar_chart_rounded, size: 20),
                         color: const Color(0xFF7B68EE),
@@ -678,51 +686,20 @@ class _SleepTrackingCardState extends State<SleepTrackingCard> {
                   child: CircularProgressIndicator(),
                 ),
               )
-            else if (_todaySleep != null) ...[
-              // Sleep data exists
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: _buildSleepInfo(
-                      icon: Icons.bedtime_rounded,
-                      label: 'Duration',
-                      value: _todaySleep!.formattedDuration,
+            else if (_recentSleep != null) ...[
+              // Sleep data exists - show simple format
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  child: Text(
+                    "Last night's sleep: ${_recentSleep!.formattedDuration}",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                       color: const Color(0xFF7B68EE),
-                      isDark: isDark,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSleepInfo(
-                      icon: Icons.star_rounded,
-                      label: 'Quality',
-                      value: _todaySleep!.qualityLabel,
-                      color: AppColors.warning,
-                      isDark: isDark,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Bed: ${_todaySleep!.bedTime}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                    ),
-                  ),
-                  Text(
-                    'Wake: ${_todaySleep!.wakeTime}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ] else ...[
               // No sleep data
@@ -738,7 +715,7 @@ class _SleepTrackingCardState extends State<SleepTrackingCard> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'No sleep logged today',
+                        'No sleep data logged',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -764,49 +741,275 @@ class _SleepTrackingCardState extends State<SleepTrackingCard> {
     );
   }
 
-  Widget _buildSleepInfo({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-    required bool isDark,
-  }) {
+}
+
+// --- Emotion Distribution Card Widget ---
+class EmotionDistributionCard extends StatefulWidget {
+  const EmotionDistributionCard({super.key});
+
+  @override
+  State<EmotionDistributionCard> createState() => _EmotionDistributionCardState();
+}
+
+class _EmotionDistributionCardState extends State<EmotionDistributionCard> {
+  final MoodService _moodService = MoodService();
+  Map<String, double> _emotionDistribution = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEmotionDistribution();
+  }
+
+  // Data source: Firebase → moods/{uid}/{YYYY-MM-DD}/emotions[]
+  Future<void> _loadEmotionDistribution() async {
+    try {
+      final distribution = await _moodService.getLast7DaysEmotionDistribution();
+      if (mounted) {
+        setState(() {
+          _emotionDistribution = distribution;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading emotion distribution: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: (isDark ? AppColors.darkCardBg : Colors.white).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFFF6B9D).withOpacity(0.12),
+            const Color(0xFFFFA8C5).withOpacity(0.08),
+          ],
         ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFFF6B9D).withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF6B9D).withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF6B9D).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.analytics_rounded,
+                      color: Color(0xFFFF6B9D),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Emotion Distribution',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: color,
+          const SizedBox(height: 16),
+
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_emotionDistribution.isEmpty) ...[
+            // No mood data
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.mood_outlined,
+                      size: 48,
+                      color: (isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No mood data yet',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Track your moods to see patterns',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ] else ...[
+            // Show emotion distribution
+            Text(
+              'Last 7 days',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ..._emotionDistribution.entries.map((entry) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildEmotionBar(
+                  emotion: entry.key,
+                  percentage: entry.value,
+                  isDark: isDark,
+                ),
+              );
+            }).toList(),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildEmotionBar({
+    required String emotion,
+    required double percentage,
+    required bool isDark,
+  }) {
+    // Get color for emotion
+    final color = _getEmotionColor(emotion);
+    final emoji = EmotionsList.getEmoji(emotion);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 18),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  emotion.capitalize(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              '${percentage.toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 8,
+          decoration: BoxDecoration(
+            color: (isDark ? AppColors.darkCardBg : const Color(0xFFF0F0F0)),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: percentage / 100,
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getEmotionColor(String emotion) {
+    // Map emotions to colors
+    switch (emotion.toLowerCase()) {
+      case 'happy':
+      case 'excited':
+      case 'grateful':
+        return const Color(0xFF4CAF50);
+      case 'calm':
+      case 'relaxed':
+      case 'peaceful':
+        return const Color(0xFF2196F3);
+      case 'sad':
+      case 'tired':
+        return const Color(0xFF9E9E9E);
+      case 'anxious':
+      case 'stressed':
+      case 'overwhelmed':
+        return const Color(0xFFFF9800);
+      case 'angry':
+      case 'frustrated':
+        return const Color(0xFFF44336);
+      case 'confident':
+      case 'energetic':
+        return const Color(0xFF9C27B0);
+      default:
+        return const Color(0xFF607D8B);
+    }
+  }
+}
+
+// String extension for capitalize
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

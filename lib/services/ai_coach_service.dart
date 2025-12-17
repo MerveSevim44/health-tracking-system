@@ -1,8 +1,8 @@
 // 📁 lib/services/ai_coach_service.dart
-// Gemini AI integration service for personalized health coaching
+// DeepSeek AI integration service for personalized health coaching
 //
 // 🛡️ FALLBACK MECHANISM:
-// - ALL Gemini API calls are wrapped in try-catch with fallback messages
+// - ALL API calls are wrapped in try-catch with fallback messages
 // - If API fails (quota, network, timeout), returns friendly Turkish fallback message
 // - Daily failure cache: if API fails once today, subsequent calls skip API and use fallback
 // - Never shows error messages to users - always returns a warm, motivating message
@@ -10,11 +10,12 @@
 
 import 'dart:async';
 import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import '../models/chat_models.dart';
 import '../models/mood_firebase_model.dart';
 import '../models/medication_firebase_model.dart';
@@ -31,8 +32,9 @@ class AiCoachService {
 
   final Random _random = Random();
   
-  // 🔑 Gemini AI Model (Google AI Studio - Using API Key, NOT Vertex AI)
-  late final GenerativeModel _model;
+  // 🔑 DeepSeek API Configuration
+  static const String _apiUrl = 'https://sii3.top/api/deepseek/api.php';
+  static const String _apiKey = 'DarkAI-DeepAI-8E19926A026AFE61A4AC41FC';
   
   // 🛡️ Fallback messages - Turkish motivational messages
   static const List<String> _fallbackMessages = [
@@ -55,12 +57,7 @@ class AiCoachService {
   DateTime? _lastFailureDate;
   
   AiCoachService() {
-    // ✅ CORRECT: Using gemini-2.5-flash (gemini-pro is deprecated)
-    // Endpoint: https://generativelanguage.googleapis.com/v1beta/
-    _model = GenerativeModel(
-      model: 'gemini-2.5-flash',
-      apiKey: 'AIzaSyBnpsgc7zFxt9Svi4vpVtnS7u0w7bgquew',
-    );
+    debugPrint('✅ AI Coach Service initialized with DeepSeek API');
   }
   
   /// Check if API failed today - if so, skip API call and use fallback immediately
@@ -116,8 +113,8 @@ class AiCoachService {
     return message;
   }
   
-  /// Execute Gemini API call with comprehensive error handling and fallback
-  Future<String> _executeGeminiCall(Future<String> Function() apiCall) async {
+  /// Execute DeepSeek API call with comprehensive error handling and fallback
+  Future<String> _executeDeepSeekCall(String prompt) async {
     // If API already failed today, skip call and return fallback immediately
     if (_shouldSkipApiCall()) {
       debugPrint('🛡️ [AI Coach] Skipping API call - already failed today, using cached fallback');
@@ -125,8 +122,14 @@ class AiCoachService {
     }
     
     try {
-      // Add timeout to prevent hanging
-      final response = await apiCall().timeout(
+      // Make POST request to DeepSeek API with timeout
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        body: {
+          'key': _apiKey,
+          'v3': prompt,
+        },
+      ).timeout(
         const Duration(seconds: 30),
         onTimeout: () {
           debugPrint('⏱️ [AI Coach] API call timeout - using fallback');
@@ -134,16 +137,29 @@ class AiCoachService {
         },
       );
       
-      // If we got here, API call succeeded - reset failure flag
-      _apiFailedToday = false;
-      return response;
+      if (response.statusCode == 200) {
+        // Parse JSON response
+        final jsonResponse = json.decode(response.body);
+        
+        if (jsonResponse['status'] == 'success' && jsonResponse['response'] != null) {
+          final responseText = jsonResponse['response'] as String;
+          
+          // If we got here, API call succeeded - reset failure flag
+          _apiFailedToday = false;
+          return responseText.trim();
+        }
+      }
+      
+      // API returned error - mark as failed
+      _markApiFailed();
+      return _getFallbackMessage();
     } on TimeoutException {
       // Timeout - mark as failed and return fallback
       _markApiFailed();
       return _getFallbackMessage();
     } catch (e) {
       // 🛡️ Silent error logging - no technical details exposed to user
-      debugPrint('❌ [AI Coach] Gemini API Error (silent fallback): ${e.runtimeType}');
+      debugPrint('❌ [AI Coach] DeepSeek API Error (silent fallback): ${e.runtimeType}');
       
       // Mark API as failed for today
       _markApiFailed();
@@ -221,12 +237,12 @@ class AiCoachService {
     return greetings[_random.nextInt(greetings.length)];
   }
 
-  /// Generate response to mood submission using Gemini AI
+  /// Generate response to mood submission using DeepSeek AI
   Future<String> generateMoodResponse({
     required int moodLevel,
     required List<String> emotions,
   }) async {
-    return _executeGeminiCall(() async {
+    try {
       final moodLabels = {
         5: 'harika',
         4: 'iyi',
@@ -257,19 +273,11 @@ Görevin:
 Dikkat: Çok genel veya yapay cevaplar verme. Kullanıcının seçtiği duyguları mutlaka yanıtına dahil et.
 ''';
 
-      final response = await _model.generateContent([Content.text(prompt)]);
-      
-      final aiResponse = response.text?.trim();
-      if (aiResponse != null && aiResponse.isNotEmpty) {
-        return aiResponse;
-      }
-      
-      // Empty response - return contextual fallback
-      return _getFallbackMoodResponse(moodLevel, emotions);
-    }).catchError((e) {
+      return await _executeDeepSeekCall(prompt);
+    } catch (e) {
       // Additional safety net - return contextual fallback
       return _getFallbackMoodResponse(moodLevel, emotions);
-    });
+    }
   }
   
   /// Emotion translations for Turkish prompts
@@ -316,9 +324,9 @@ Dikkat: Çok genel veya yapay cevaplar verme. Kullanıcının seçtiği duygular
     return tips[_random.nextInt(tips.length)];
   }
   
-  /// Generate chat response using Gemini AI
+  /// Generate chat response using DeepSeek AI
   Future<String> generateChatResponse(String userMessage) async {
-    return _executeGeminiCall(() async {
+    try {
       final prompt = '''
 Sen empatik bir sağlık koçu asistanısın. Adın "AI Health Coach". 
 
@@ -335,19 +343,11 @@ Görevin:
 Önemli: Tıbbi teşhis koyma, sadece genel sağlık tavsiyeleri ver.
 ''';
 
-      final response = await _model.generateContent([Content.text(prompt)]);
-      
-      final aiResponse = response.text?.trim();
-      if (aiResponse != null && aiResponse.isNotEmpty) {
-        return aiResponse;
-      }
-      
-      // Empty response fallback
-      return _getFallbackMessage();
-    }).catchError((e) {
+      return await _executeDeepSeekCall(prompt);
+    } catch (e) {
       // Additional safety net
       return _getFallbackMessage();
-    });
+    }
   }
 
   // ==================== PRIVATE HELPERS ====================

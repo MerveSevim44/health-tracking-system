@@ -64,6 +64,38 @@ class SleepService {
     }
   }
 
+  /// Get sleep entry for yesterday
+  Future<SleepLog?> getYesterdaySleep() async {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final yesterdayKey = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+    
+    final snapshot = await _sleepLogsRef().child(yesterdayKey).get();
+    
+    if (!snapshot.exists) return null;
+
+    try {
+      return SleepLog.fromJson(
+        yesterdayKey,
+        Map<String, dynamic>.from(snapshot.value as Map),
+      );
+    } catch (e) {
+      debugPrint('Error parsing yesterday\'s sleep: $e');
+      return null;
+    }
+  }
+
+  /// Get most recent sleep data (today or yesterday)
+  /// Data source: Firebase → sleep_logs/{uid}/{YYYY-MM-DD}
+  Future<SleepLog?> getRecentSleep() async {
+    // Check today first
+    final todaySleep = await getTodaySleep();
+    if (todaySleep != null) return todaySleep;
+
+    // If no data today, check yesterday
+    final yesterdaySleep = await getYesterdaySleep();
+    return yesterdaySleep;
+  }
+
   /// Get sleep entries for a date range
   Future<List<SleepLog>> getSleepForDateRange(DateTime start, DateTime end) async {
     final snapshot = await _sleepLogsRef().get();

@@ -287,4 +287,44 @@ class MoodService {
       return [];
     }
   }
+
+  /// Get emotion distribution from last 7 days
+  /// Data source: Firebase → moods/{uid}/{YYYY-MM-DD}/emotions[]
+  /// Returns percentage for each emotion found in the last 7 days
+  Future<Map<String, double>> getLast7DaysEmotionDistribution() async {
+    try {
+      final now = DateTime.now();
+      final sevenDaysAgo = now.subtract(const Duration(days: 7));
+      
+      // Get moods from last 7 days
+      final moods = await getMoodsForDateRange(sevenDaysAgo, now);
+      
+      if (moods.isEmpty) return {};
+
+      // Count each emotion
+      final Map<String, int> emotionCounts = {};
+      int totalEmotions = 0;
+
+      for (var mood in moods) {
+        for (var emotion in mood.emotions) {
+          emotionCounts[emotion] = (emotionCounts[emotion] ?? 0) + 1;
+          totalEmotions++;
+        }
+      }
+
+      // If no emotions found
+      if (totalEmotions == 0) return {};
+
+      // Calculate percentages
+      final Map<String, double> distribution = {};
+      emotionCounts.forEach((emotion, count) {
+        distribution[emotion] = (count / totalEmotions) * 100;
+      });
+
+      return distribution;
+    } catch (e) {
+      debugPrint('Error getting emotion distribution: $e');
+      return {};
+    }
+  }
 }
