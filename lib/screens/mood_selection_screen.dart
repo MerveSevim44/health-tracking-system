@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:health_care/theme/app_theme.dart';
+import 'package:health_care/theme/modern_colors.dart';
 import 'package:health_care/widgets/mood_blob.dart';
 import 'package:health_care/widgets/pastel_components.dart';
 import 'package:health_care/widgets/mood/emotion_chips.dart';
@@ -47,18 +48,21 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
     return Consumer<MoodModel>(
       builder: (context, moodModel, child) {
         final selectedMoodIndex = moodModel.selectedMoodIndex;
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: GradientBackground(
-        colors: [
-          theme.colorScheme.primaryContainer,
-          theme.colorScheme.secondaryContainer,
-        ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              ModernAppColors.darkBg,
+              ModernAppColors.cardBg,
+            ],
+          ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -69,16 +73,16 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_ios),
-                      color: theme.iconTheme.color,
+                      icon: const Icon(Icons.arrow_back),
+                      color: ModernAppColors.lightText,
                     ),
                     const Spacer(),
                     IconButton(
                       onPressed: selectedMoodIndex >= 0 ? _saveMood : null,
                       icon: const Icon(Icons.check),
                       color: selectedMoodIndex >= 0 
-                          ? theme.iconTheme.color 
-                          : theme.disabledColor,
+                          ? ModernAppColors.vibrantCyan
+                          : ModernAppColors.mutedText,
                     ),
                   ],
                 ),
@@ -94,6 +98,7 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                   textAlign: TextAlign.center,
                   style: AppTextStyles.displayMedium.copyWith(
                     fontWeight: FontWeight.w400,
+                    color: ModernAppColors.lightText,
                   ),
                 ),
               ),
@@ -110,7 +115,7 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                     scale: value,
                     child: MoodBlob(
                       size: 200,
-                      color: theme.colorScheme.primary,
+                      color: ModernAppColors.vibrantCyan,
                       expression: MoodExpression.happy,
                       animated: true,
                     ),
@@ -126,8 +131,12 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                 child: Container(
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: ModernAppColors.cardBg.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: ModernAppColors.mutedText.withOpacity(0.2),
+                      width: 1,
+                    ),
                   ),
                   child: Stack(
                     children: [
@@ -178,7 +187,7 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                     Text(
                       'How are you feeling?',
                       style: AppTextStyles.headlineMedium.copyWith(
-                        color: theme.textTheme.bodyLarge?.color,
+                        color: ModernAppColors.lightText,
                         fontSize: 18,
                       ),
                     ),
@@ -200,13 +209,34 @@ class _MoodSelectionScreenState extends State<MoodSelectionScreen> {
                   controller: _notesController,
                   onChanged: (value) => moodModel.updateDailyNote(value),
                   maxLines: 3,
+                  style: const TextStyle(
+                    color: ModernAppColors.lightText,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Add notes about your day...',
+                    hintStyle: TextStyle(
+                      color: ModernAppColors.mutedText.withOpacity(0.7),
+                    ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.3),
+                    fillColor: ModernAppColors.cardBg.withOpacity(0.5),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(
+                        color: ModernAppColors.mutedText.withOpacity(0.3),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: ModernAppColors.mutedText.withOpacity(0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: ModernAppColors.vibrantCyan,
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -228,7 +258,7 @@ class WavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.6)
+      ..color = ModernAppColors.vibrantCyan.withOpacity(0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 

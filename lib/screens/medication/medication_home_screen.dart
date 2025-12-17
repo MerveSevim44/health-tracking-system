@@ -155,25 +155,38 @@ class _MedicationHomeScreenState extends State<MedicationHomeScreen> with Single
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Medications',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: ModernAppColors.lightText,
-            ),
+          // Back button with title
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: ModernAppColors.lightText),
+                onPressed: () => Navigator.pop(context),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Medications',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: ModernAppColors.lightText,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
-          Text(
-            _medications.isEmpty 
-                ? 'No medications added yet'
-                : '${_medications.length} active medication${_medications.length != 1 ? 's' : ''}',
-            style: const TextStyle(
-              fontSize: 16,
-              color: ModernAppColors.mutedText,
+          Padding(
+            padding: const EdgeInsets.only(left: 56), // Align with title after back button
+            child: Text(
+              _medications.isEmpty 
+                  ? 'No medications added yet'
+                  : '${_medications.length} active medication${_medications.length != 1 ? 's' : ''}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: ModernAppColors.mutedText,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

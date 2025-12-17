@@ -7,6 +7,7 @@ import 'package:health_care/services/mood_service.dart';
 import 'package:health_care/services/chat_service.dart';
 import 'package:health_care/services/ai_coach_service.dart';
 import 'package:health_care/theme/app_theme.dart';
+import 'package:health_care/theme/modern_colors.dart';
 
 class MoodCheckinScreen extends StatefulWidget {
   final VoidCallback? onComplete;
@@ -179,13 +180,12 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
   }
 
   Future<void> _showAiResponseDialog(String aiResponse) async {
-    final theme = Theme.of(context);
-
     return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return Dialog(
+          backgroundColor: ModernAppColors.cardBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.xl),
           ),
@@ -198,13 +198,8 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                 Container(
                   width: 80,
                   height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        theme.colorScheme.primary,
-                        theme.colorScheme.secondary,
-                      ],
-                    ),
+                  decoration: const BoxDecoration(
+                    gradient: ModernAppColors.primaryGradient,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -216,10 +211,12 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                 const SizedBox(height: AppSpacing.md),
 
                 // Title
-                Text(
+                const Text(
                   'AI Health Coach',
-                  style: theme.textTheme.headlineMedium?.copyWith(
+                  style: TextStyle(
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
+                    color: ModernAppColors.lightText,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -228,13 +225,17 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: ModernAppColors.deepPurple.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: Text(
                     aiResponse,
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                      color: ModernAppColors.lightText,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -242,16 +243,36 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                 // Continue Button
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop(); // Close dialog
-                      if (widget.onComplete != null) {
-                        widget.onComplete!();
-                      } else {
-                        Navigator.of(context).pop(true);
-                      }
-                    },
-                    child: const Text('Continue to Home'),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: ModernAppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop(); // Close dialog
+                        if (widget.onComplete != null) {
+                          widget.onComplete!();
+                        } else {
+                          Navigator.of(context).pop(true);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                      ),
+                      child: const Text(
+                        'Continue to Home',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -286,26 +307,16 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-                    const Color(0xFF1A1A2E),
-                    const Color(0xFF16213E),
-                    const Color(0xFF0F3460),
-                  ]
-                : [
-                    const Color(0xFFFAFBFF),
-                    const Color(0xFFF0F4FF),
-                    const Color(0xFFE8F1FF),
-                  ],
+            colors: [
+              ModernAppColors.darkBg,
+              ModernAppColors.cardBg,
+            ],
           ),
         ),
         child: SafeArea(
@@ -314,13 +325,16 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(
-                        color: theme.colorScheme.primary,
+                      const CircularProgressIndicator(
+                        color: ModernAppColors.vibrantCyan,
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      Text(
+                      const Text(
                         'Saving your mood...',
-                        style: theme.textTheme.bodyLarge,
+                        style: TextStyle(
+                          color: ModernAppColors.lightText,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -331,18 +345,17 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Skip button - subtle in top right
+                      // Back button - top left
                       Align(
-                        alignment: Alignment.topRight,
+                        alignment: Alignment.topLeft,
                         child: IconButton(
                           onPressed: _skip,
-                          icon: Icon(
-                            Icons.close_rounded,
+                          icon: const Icon(
+                            Icons.arrow_back,
                             size: 24,
-                            color: theme.textTheme.bodySmall?.color
-                                ?.withOpacity(0.5),
+                            color: ModernAppColors.lightText,
                           ),
-                          tooltip: 'Skip for today',
+                          tooltip: 'Go back',
                         ),
                       ),
 
@@ -359,8 +372,8 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                theme.colorScheme.primary.withOpacity(0.1),
-                                theme.colorScheme.secondary.withOpacity(0.1),
+                                ModernAppColors.deepPurple.withOpacity(0.3),
+                                ModernAppColors.vibrantCyan.withOpacity(0.3),
                               ],
                             ),
                             shape: BoxShape.circle,
@@ -376,12 +389,13 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                       // Title
                       FadeTransition(
                         opacity: _fadeAnimation,
-                        child: Text(
+                        child: const Text(
                           'How are you today?',
                           textAlign: TextAlign.center,
-                          style: theme.textTheme.displayMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
                             fontSize: 32,
+                            color: ModernAppColors.lightText,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -400,8 +414,8 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                               child: Text(
                                 'Take a moment to check in with yourself ',
                                 textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: theme.textTheme.bodySmall?.color,
+                                style: TextStyle(
+                                  color: ModernAppColors.mutedText,
                                   fontSize: 16,
                                 ),
                                 maxLines: 2,
@@ -418,18 +432,22 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                       // Mood Level Selection
                       FadeTransition(
                         opacity: _fadeAnimation,
-                        child: Card(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: ModernAppColors.cardBg,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             child: Column(
                               children: [
-                                Text(
+                                const Text(
                                   'How is your day going?',
-                                  style: theme.textTheme.headlineMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 20,
-                                      ),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 20,
+                                    color: ModernAppColors.lightText,
+                                  ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
@@ -465,8 +483,8 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                                             ),
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? moodColor.withOpacity(0.15)
-                                                  : theme.colorScheme.surface,
+                                                  ? moodColor.withOpacity(0.2)
+                                                  : ModernAppColors.darkBg,
                                               borderRadius:
                                                   BorderRadius.circular(
                                                     AppRadius.lg,
@@ -474,7 +492,7 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                                               border: Border.all(
                                                 color: isSelected
                                                     ? moodColor
-                                                    : theme.colorScheme.outline
+                                                    : ModernAppColors.mutedText
                                                           .withOpacity(0.3),
                                                 width: isSelected ? 2.5 : 1,
                                               ),
@@ -508,15 +526,13 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                                                 ),
                                                 Text(
                                                   mood['label'],
-                                                  style: theme
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        fontWeight: isSelected
-                                                            ? FontWeight.w600
-                                                            : FontWeight.w400,
-                                                        fontSize: 11,
-                                                      ),
+                                                  style: TextStyle(
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.w600
+                                                        : FontWeight.w400,
+                                                    fontSize: 11,
+                                                    color: ModernAppColors.lightText,
+                                                  ),
                                                   textAlign: TextAlign.center,
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
@@ -540,15 +556,22 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                       // Emotions Selection - Grouped by Category
                       FadeTransition(
                         opacity: _fadeAnimation,
-                        child: Card(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: ModernAppColors.cardBg,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             child: Column(
                               children: [
-                                Text(
+                                const Text(
                                   'What emotions are you feeling?',
-                                  style: theme.textTheme.headlineMedium
-                                      ?.copyWith(fontWeight: FontWeight.w500),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 20,
+                                    color: ModernAppColors.lightText,
+                                  ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
@@ -556,8 +579,9 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                                 const SizedBox(height: AppSpacing.xs),
                                 Text(
                                   'Select all that apply',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.textTheme.bodySmall?.color,
+                                  style: TextStyle(
+                                    color: ModernAppColors.mutedText,
+                                    fontSize: 14,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -579,16 +603,12 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                                         ),
                                         child: Text(
                                           category.key,
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w600,
-                                                color: theme
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.color,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: ModernAppColors.mutedText,
+                                            fontSize: 12,
+                                            letterSpacing: 0.5,
+                                          ),
                                         ),
                                       ),
 
@@ -631,9 +651,9 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                                               decoration: BoxDecoration(
                                                 color: isSelected
                                                     ? emotionColor.withOpacity(
-                                                        0.15,
+                                                        0.2,
                                                       )
-                                                    : theme.colorScheme.surface,
+                                                    : ModernAppColors.darkBg,
                                                 borderRadius:
                                                     BorderRadius.circular(
                                                       AppRadius.xl,
@@ -641,9 +661,7 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                                                 border: Border.all(
                                                   color: isSelected
                                                       ? emotionColor
-                                                      : theme
-                                                            .colorScheme
-                                                            .outline
+                                                      : ModernAppColors.mutedText
                                                             .withOpacity(0.3),
                                                   width: isSelected ? 2 : 1,
                                                 ),
@@ -678,15 +696,13 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                                                   Flexible(
                                                     child: Text(
                                                       emotion['label']!,
-                                                      style: theme
-                                                          .textTheme
-                                                          .bodyMedium
-                                                          ?.copyWith(
-                                                            fontWeight: isSelected
-                                                                ? FontWeight.w600
-                                                                : FontWeight.w400,
-                                                            fontSize: 14,
-                                                          ),
+                                                      style: TextStyle(
+                                                        fontWeight: isSelected
+                                                            ? FontWeight.w600
+                                                            : FontWeight.w400,
+                                                        fontSize: 14,
+                                                        color: ModernAppColors.lightText,
+                                                      ),
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
                                                     ),
@@ -728,17 +744,12 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                             gradient:
                                 (_selectedMoodLevel != null ||
                                     _selectedEmotions.isNotEmpty)
-                                ? LinearGradient(
-                                    colors: [
-                                      theme.colorScheme.primary,
-                                      theme.colorScheme.secondary,
-                                    ],
-                                  )
+                                ? ModernAppColors.primaryGradient
                                 : null,
                             color:
                                 (_selectedMoodLevel == null &&
                                     _selectedEmotions.isEmpty)
-                                ? theme.colorScheme.outline.withOpacity(0.3)
+                                ? ModernAppColors.mutedText.withOpacity(0.3)
                                 : null,
                           ),
                           child: ElevatedButton.icon(
@@ -781,8 +792,8 @@ class _MoodCheckinScreenState extends State<MoodCheckinScreen>
                         onPressed: _skip,
                         child: Text(
                           'Skip for today',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.textTheme.bodySmall?.color,
+                          style: TextStyle(
+                            color: ModernAppColors.mutedText,
                             decoration: TextDecoration.underline,
                           ),
                         ),

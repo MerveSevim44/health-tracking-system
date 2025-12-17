@@ -1,4 +1,4 @@
-// 📁 lib/services/firebase_gemini_service.dart
+  // 📁 lib/services/firebase_gemini_service.dart
 // DeepSeek AI integration using HTTP API
 // 
 // ✅ IMPLEMENTATION:

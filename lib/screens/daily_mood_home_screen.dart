@@ -38,6 +38,11 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
   int _medicationTotal = 0;
   String _sleepDuration = 'No data';
   Map<String, double> _emotionDistribution = {};
+  
+  // Mood score data
+  double _moodScore = 0.0;
+  String _moodLabel = '';
+  bool _hasMoodData = false;
 
   @override
   void initState() {
@@ -55,6 +60,7 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
       _loadMedicationData(),
       _loadSleepData(),
       _loadEmotionDistribution(),
+      _loadMoodScore(),
     ]);
   }
 
@@ -208,6 +214,85 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
       }
     } catch (e) {
       debugPrint('Error loading emotion distribution: $e');
+    }
+  }
+
+  /// Load mood score - uses today's mood if available, otherwise last 7 days average
+  Future<void> _loadMoodScore() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      // First, try to get today's mood
+      final todayMood = await _moodService.getTodayMood();
+      
+      if (todayMood != null) {
+        // Convert 1-5 scale to 10-point scale (1→2, 5→10)
+        final score = todayMood.moodLevel * 2.0;
+        
+        if (mounted) {
+          setState(() {
+            _moodScore = score;
+            _moodLabel = _getMoodMessage(todayMood.moodLevel);
+            _hasMoodData = true;
+          });
+          debugPrint("Today's mood score: $_moodScore (level: ${todayMood.moodLevel})");
+        }
+        return;
+      }
+
+      // If no today's mood, get weekly average
+      final now = DateTime.now();
+      final weekAgo = now.subtract(const Duration(days: 7));
+      final averageMood = await _moodService.getAverageMoodLevel(weekAgo, now);
+      
+      if (averageMood > 0) {
+        // Convert 1-5 scale to 10-point scale
+        final score = averageMood * 2.0;
+        
+        if (mounted) {
+          setState(() {
+            _moodScore = score;
+            _moodLabel = _getMoodMessage(averageMood.round());
+            _hasMoodData = true;
+          });
+          debugPrint("Weekly average mood score: $_moodScore");
+        }
+      } else {
+        // No mood data at all
+        if (mounted) {
+          setState(() {
+            _moodScore = 0.0;
+            _moodLabel = '';
+            _hasMoodData = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading mood score: $e');
+      if (mounted) {
+        setState(() {
+          _hasMoodData = false;
+        });
+      }
+    }
+  }
+
+  /// Get friendly message based on mood level
+  String _getMoodMessage(int moodLevel) {
+    switch (moodLevel) {
+      case 5:
+        return 'Amazing day! 🎉';
+      case 4:
+        return 'Great today! 🌟';
+      case 3:
+        return 'Doing okay 👍';
+      case 2:
+        return 'Hang in there 💪';
+      case 1:
+        return 'Take it easy 💙';
+      default:
+        return '';
     }
   }
 
@@ -449,63 +534,82 @@ class _DailyMoodHomeScreenState extends State<DailyMoodHomeScreen> with SingleTi
   }
 
   Widget _buildMoodScoreCard() {
-    return Container(
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        gradient: ModernAppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          ModernAppColors.primaryShadow(opacity: 0.4),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.emoji_emotions_rounded,
-              color: ModernAppColors.lightText,
-              size: 35,
-            ),
+    return GestureDetector(
+      onTap: () async {
+        // Navigate to mood check-in and refresh data when returning
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const MoodCheckinScreen(),
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Your Mood Score',
-                  style: TextStyle(
-                    color: ModernAppColors.lightText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                const Text(
-                  '8.5',
-                  style: TextStyle(
-                    color: ModernAppColors.lightText,
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Great today! 🎉',
-                  style: TextStyle(
-                    color: ModernAppColors.lightText.withOpacity(0.9),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+        );
+        // Refresh mood score after returning
+        _loadMoodScore();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(25),
+        decoration: BoxDecoration(
+          gradient: ModernAppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            ModernAppColors.primaryShadow(opacity: 0.4),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _hasMoodData ? Icons.emoji_emotions_rounded : Icons.add_reaction_outlined,
+                color: ModernAppColors.lightText,
+                size: 35,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Your Mood Score',
+                    style: TextStyle(
+                      color: ModernAppColors.lightText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    _hasMoodData ? _moodScore.toStringAsFixed(1) : '--',
+                    style: const TextStyle(
+                      color: ModernAppColors.lightText,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    _hasMoodData ? _moodLabel : 'Tap to log your mood',
+                    style: TextStyle(
+                      color: ModernAppColors.lightText.withOpacity(0.9),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Arrow indicator
+            Icon(
+              Icons.chevron_right_rounded,
+              color: ModernAppColors.lightText.withOpacity(0.7),
+              size: 28,
+            ),
+          ],
+        ),
       ),
     );
   }

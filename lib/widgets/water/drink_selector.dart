@@ -93,26 +93,62 @@ class _DrinkIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        width: 56,
-        height: 56,
-        margin: const EdgeInsets.only(top: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? drink.color : drink.color.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: isSelected ? WaterShadows.button : null,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Main drink icon
+        GestureDetector(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: 56,
+            height: 56,
+            margin: const EdgeInsets.only(top: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? drink.color : drink.color.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: isSelected ? WaterShadows.button : null,
+            ),
+            child: Icon(
+              drink.icon,
+              color: isSelected ? Colors.white : drink.color,
+              size: 28,
+            ),
+          ),
         ),
-        child: Icon(
-          drink.icon,
-          color: isSelected ? Colors.white : drink.color,
-          size: 28,
-        ),
-      ),
+        
+        // Info button - top right corner
+        if (onLongPress != null)
+          Positioned(
+            top: 4,
+            right: -4,
+            child: GestureDetector(
+              onTap: onLongPress,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: WaterColors.waterPrimary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: WaterColors.waterPrimary.withOpacity(0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.info_outline,
+                  color: Colors.white,
+                  size: 12,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

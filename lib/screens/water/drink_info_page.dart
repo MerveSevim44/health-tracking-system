@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:health_care/models/drink_type_info.dart';
-import 'package:health_care/theme/app_theme.dart';
+import 'package:health_care/theme/modern_colors.dart';
 
 class DrinkInfoPage extends StatelessWidget {
   final DrinkTypeInfo drinkInfo;
@@ -16,43 +16,54 @@ class DrinkInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDrinkIcon(),
-                      const SizedBox(height: 24),
-                      _buildTitle(),
-                      const SizedBox(height: 16),
-                      _buildDescription(),
-                      const SizedBox(height: 32),
-                      _buildHydrationFactor(),
-                      const SizedBox(height: 24),
-                      _buildBenefitsSection(),
-                      if (drinkInfo.risks.isNotEmpty) ...[
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              ModernAppColors.darkBg,
+              ModernAppColors.cardBg,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDrinkIcon(),
                         const SizedBox(height: 24),
-                        _buildRisksSection(),
+                        _buildTitle(),
+                        const SizedBox(height: 16),
+                        _buildDescription(),
+                        const SizedBox(height: 32),
+                        _buildHydrationFactor(),
+                        const SizedBox(height: 24),
+                        _buildBenefitsSection(),
+                        if (drinkInfo.risks.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          _buildRisksSection(),
+                        ],
+                        const SizedBox(height: 24),
+                        _buildRecommendedDaily(),
+                        const SizedBox(height: 32),
+                        _buildUseThisDrinkButton(context),
+                        const SizedBox(height: 24),
                       ],
-                      const SizedBox(height: 24),
-                      _buildRecommendedDaily(),
-                      const SizedBox(height: 32),
-                      _buildUseThisDrinkButton(context),
-                      const SizedBox(height: 24),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -61,20 +72,10 @@ class DrinkInfoPage extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.lightTextPrimary),
+            icon: const Icon(Icons.arrow_back, color: ModernAppColors.lightText),
             onPressed: () => Navigator.pop(context),
           ),
           const SizedBox(width: 8),
@@ -83,7 +84,7 @@ class DrinkInfoPage extends StatelessWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppColors.lightTextPrimary,
+              color: ModernAppColors.lightText,
             ),
           ),
         ],
@@ -124,7 +125,7 @@ class DrinkInfoPage extends StatelessWidget {
         style: const TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
-          color: AppColors.lightTextPrimary,
+          color: ModernAppColors.lightText,
         ),
       ),
     );
@@ -134,22 +135,19 @@ class DrinkInfoPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ModernAppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(
+          color: ModernAppColors.mutedText.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Text(
         drinkInfo.description,
         style: const TextStyle(
           fontSize: 16,
           height: 1.6,
-          color: AppColors.lightTextSecondary,
+          color: ModernAppColors.mutedText,
         ),
         textAlign: TextAlign.center,
       ),
@@ -162,31 +160,26 @@ class DrinkInfoPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            drinkInfo.color.withValues(alpha: 0.2),
-            drinkInfo.color.withValues(alpha: 0.1),
-          ],
-        ),
+        color: ModernAppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: drinkInfo.color.withValues(alpha: 0.3),
+          color: drinkInfo.color.withValues(alpha: 0.5),
           width: 2,
         ),
       ),
       child: Column(
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.water_drop, color: Color(0xFF4FC3F7), size: 24),
-              SizedBox(width: 8),
-              Text(
+              Icon(Icons.water_drop, color: ModernAppColors.vibrantCyan, size: 24),
+              const SizedBox(width: 8),
+              const Text(
                 'Hydration Factor',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.lightTextPrimary,
+                  color: ModernAppColors.lightText,
                 ),
               ),
             ],
@@ -197,7 +190,7 @@ class DrinkInfoPage extends StatelessWidget {
               Container(
                 height: 12,
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                  color: ModernAppColors.darkBg,
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
@@ -221,9 +214,9 @@ class DrinkInfoPage extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             '$percentage% as hydrating as water',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
-              color: AppColors.lightTextSecondary,
+              color: ModernAppColors.mutedText,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -256,10 +249,10 @@ class DrinkInfoPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ModernAppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: color.withValues(alpha: 0.3),
+          color: color.withValues(alpha: 0.5),
           width: 2,
         ),
       ),
@@ -295,7 +288,7 @@ class DrinkInfoPage extends StatelessWidget {
                         item,
                         style: const TextStyle(
                           fontSize: 15,
-                          color: AppColors.lightTextPrimary,
+                          color: ModernAppColors.lightText,
                           height: 1.5,
                         ),
                       ),
@@ -312,13 +305,12 @@ class DrinkInfoPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            drinkInfo.color.withValues(alpha: 0.15),
-            drinkInfo.color.withValues(alpha: 0.05),
-          ],
-        ),
+        color: ModernAppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: drinkInfo.color.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -344,7 +336,7 @@ class DrinkInfoPage extends StatelessWidget {
                   'Recommended Daily',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.lightTextSecondary,
+                    color: ModernAppColors.mutedText,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -353,7 +345,7 @@ class DrinkInfoPage extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.lightTextPrimary,
+                    color: ModernAppColors.lightText,
                   ),
                 ),
               ],
