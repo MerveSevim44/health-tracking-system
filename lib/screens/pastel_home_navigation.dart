@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:health_care/theme/app_theme.dart';
+import 'dart:ui';
 import 'package:health_care/screens/daily_mood_home_screen.dart';
 import 'package:health_care/screens/weekly_dashboard_screen.dart';
-import 'package:health_care/screens/mood_selection_screen.dart';
 import 'package:health_care/screens/water/water_home_screen.dart';
 import 'package:health_care/screens/medication/medication_home_screen.dart';
 import 'package:health_care/screens/chat_screen.dart';
@@ -84,12 +83,14 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
+            backgroundColor: Color(0xFF0E1220), // Consistent dark background
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
         // Veri yüklendikten sonra normal navigasyon yapısını döndür
         return Scaffold(
+          backgroundColor: const Color(0xFF0E1220), // Dark background to prevent white bleed
           body: AnimatedSwitcher(
             duration: const Duration(milliseconds: 400),
             switchInCurve: Curves.easeInOutCubic,
@@ -114,45 +115,100 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
               child: _getScreen(_currentIndex),
             ),
           ),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  // AppColors.lightTextSecondary.withOpacity ile uyumlu olması beklenir
-                  color: AppColors.lightTextSecondary.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(Icons.home_outlined, 0), // Home
-                    _buildNavItem(Icons.bar_chart_outlined, 1), // Dashboard
-                    _buildNavItem(Icons.chat_bubble_outline, 2), // AI Coach Chat
-                    _buildNavItem(Icons.water_drop_outlined, 3), // Water
-                    _buildNavItem(Icons.medication_liquid, 4), // Medication
-                    _buildNavItem(Icons.person_outline, 5), // Profile
-                  ],
-                ),
-              ),
-            ),
-          ),
+          bottomNavigationBar: _buildModernNavBar(),
         );
       },
     );
   }
 
+  // 🎨 Modern Glassmorphic Bottom Navigation Bar (Edge-to-Edge)
+  Widget _buildModernNavBar() {
+    return Container(
+      width: double.infinity, // Force full width
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0E1220), // Dark gradient start
+            Color(0xFF1A1F3C), // Dark gradient end
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6C63FF).withOpacity(0.15),
+            blurRadius: 30,
+            offset: const Offset(0, -8),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: const Color(0xFF00D4FF).withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: double.infinity, // Ensure inner container is also full width
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF0E1220).withOpacity(0.95),
+                  const Color(0xFF1A1F3C).withOpacity(0.95),
+                ],
+              ),
+              border: Border(
+                top: BorderSide(
+                  color: const Color(0xFF6C63FF).withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              left: false,  // Allow navbar to extend to left edge
+              right: false, // Allow navbar to extend to right edge
+              top: false,   // No top padding needed
+              bottom: true, // Only respect bottom safe area (notch/home indicator)
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(Icons.home_rounded, 0),
+                    _buildNavItem(Icons.bar_chart_rounded, 1),
+                    _buildNavItem(Icons.psychology_rounded, 2),
+                    _buildNavItem(Icons.water_drop_rounded, 3),
+                    _buildNavItem(Icons.medication_rounded, 4),
+                    _buildNavItem(Icons.person_rounded, 5),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🎨 Modern Navigation Item with Gradient & Glow
   Widget _buildNavItem(IconData icon, int index) {
     final isSelected = _currentIndex == index;
+    
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -160,22 +216,97 @@ class _PastelHomeNavigationState extends State<PastelHomeNavigation> {
         });
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOutCubic,
-        padding: const EdgeInsets.all(12),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubicEmphasized,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.lightTextPrimary.withOpacity(0.08) : Colors.transparent,
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF6C63FF).withOpacity(0.3),
+                    const Color(0xFF00D4FF).withOpacity(0.2),
+                  ],
+                )
+              : null,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF6C63FF).withOpacity(0.4),
+                    blurRadius: 12,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: const Color(0xFF00D4FF).withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: -2,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutCubic,
-          scale: isSelected ? 1.15 : 1.0,
-          child: Icon(
-            icon,
-            color: isSelected ? AppColors.lightTextPrimary : AppColors.lightTextSecondary,
-            size: 28,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon with gradient effect
+            AnimatedScale(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOutCubicEmphasized,
+              scale: isSelected ? 1.1 : 1.0,
+              child: ShaderMask(
+                shaderCallback: (bounds) {
+                  if (isSelected) {
+                    return const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF6C63FF),
+                        Color(0xFF00D4FF),
+                      ],
+                    ).createShader(bounds);
+                  }
+                  return const LinearGradient(
+                    colors: [Color(0xFF7A7FA8), Color(0xFF7A7FA8)],
+                  ).createShader(bounds);
+                },
+                child: Icon(
+                  icon,
+                  size: 26,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            
+            // Active indicator dot
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOutCubicEmphasized,
+              margin: const EdgeInsets.only(top: 6),
+              width: isSelected ? 6 : 0,
+              height: isSelected ? 6 : 0,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF6C63FF),
+                    Color(0xFF00D4FF),
+                  ],
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF6C63FF).withOpacity(0.6),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+            ),
+          ],
         ),
       ),
     );
