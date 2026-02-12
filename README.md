@@ -137,6 +137,38 @@ The app uses a modern design language with:
 - Mood check-in
 - Water & medication tracking
 
+## Application Interface
+
+<table>
+<tr>
+<td align="center">
+<b>Login / Welcome Screen</b><br>
+<img src="https://github.com/user-attachments/assets/4399b93b-50f0-4f28-823d-e561b5a9561c" width="250"/>
+</td>
+
+<td align="center">
+<b>How Are You Today :)</b><br>
+<img src="https://github.com/user-attachments/assets/62df6eaa-26d8-48b9-aac7-60e95a5a5dd4" width="250"/>
+</td>
+</tr>
+
+<tr>
+<td align="center">
+<b>AI Coach</b><br>
+<img src="https://github.com/user-attachments/assets/2f6d206e-27d2-4a2e-9aef-44f21047d53a" width="250"/>
+</td>
+
+<td align="center">
+<b>Main Screen</b><br>
+<img src="https://github.com/user-attachments/assets/4c687600-bca0-402c-8882-628f2aa1789c" width="250"/>
+</td>
+</tr>
+</table>
+
+
+
+
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
